@@ -376,3 +376,4 @@ Temp_Parquet/
 /MigrationDataBase/nul
 
 *.sh
+/R2SentinelBak/appsettings.Development.json
