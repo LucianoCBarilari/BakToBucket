@@ -33,10 +33,17 @@ The application currently contains:
 
 ## Dependencies
 
-The project file currently includes:
+Current project dependencies:
 
 - `Microsoft.Extensions.Hosting` `10.0.8`
 - `Microsoft.VisualStudio.Azure.Containers.Tools.Targets` `1.23.0`
+
+Planned dependencies for the Sentinel backup workflow:
+
+- `Polly` for retry and resilience policies
+- `DotNetEnv` for `.env` loading
+- `AWSSDK.S3` for Cloudflare R2 compatibility
+- `System.IO.Compression` from the .NET runtime for ZIP compression
 
 ## Repository Layout
 
@@ -85,6 +92,17 @@ R2SentinelBak/
 The current worker does not require external backup credentials yet. Runtime behavior is driven by the default logging configuration in `appsettings.json`.
 
 If you extend the service toward the Sentinel backup workflow, this is where environment variables or secret-backed settings for things like database connection strings, R2 credentials, bucket names, and scheduling intervals should be documented.
+
+Example `.env` file for the future backup workflow:
+
+```env
+R2_ACCESS_KEY=your_access_key
+R2_SECRET_KEY=your_secret_key
+R2_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com
+R2_BUCKET_NAME=backups
+DB_CONNECTION_STRING=Server=localhost;Database=your_db;Trusted_Connection=True;TrustServerCertificate=True
+BACKUP_INTERVAL_HOURS=24
+```
 
 ## Build
 

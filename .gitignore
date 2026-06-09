@@ -376,4 +376,6 @@ Temp_Parquet/
 /MigrationDataBase/nul
 
 *.sh
+.env
+!.env.example
 /R2SentinelBak/appsettings.Development.json
