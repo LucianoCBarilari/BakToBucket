@@ -10,19 +10,19 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["R2SentinelBak/R2SentinelBak.csproj", "R2SentinelBak/"]
-RUN dotnet restore "./R2SentinelBak/R2SentinelBak.csproj"
+COPY ["R2SentinelWorker/R2SentinelWorker.csproj", "R2SentinelWorker/"]
+RUN dotnet restore "./R2SentinelWorker/R2SentinelWorker.csproj"
 COPY . .
-WORKDIR "/src/R2SentinelBak"
-RUN dotnet build "./R2SentinelBak.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/R2SentinelWorker"
+RUN dotnet build "./R2SentinelWorker.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./R2SentinelBak.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./R2SentinelWorker.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "R2SentinelBak.dll"]
+ENTRYPOINT ["dotnet", "R2SentinelWorker.dll"]
