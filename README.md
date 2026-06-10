@@ -1,166 +1,77 @@
-# R2SentinelBak
+# R2SentinelBak v0.8.5
 
-R2SentinelBak is a .NET 10 background service scaffold for a future backup workflow. The current codebase is intentionally minimal, but the repository is set up to evolve into a production-grade sentinel for database backup orchestration and object storage delivery.
+**R2SentinelBak** is a robust, multi-platform .NET 10 background service designed for automated SQL Server database backups and secure delivery to Cloudflare R2 (or any S3-compatible storage).
 
-## Project Overview
+## 🚀 Features
 
-The long-term vision for **R2SentinelBak** is a high-performance service that:
+- **Automated SQL Backups**: Configurable database selection via IncludedDatabases in ppsettings.json.
+- **Intelligent Compression**: Backups are zipped locally using a descriptive naming convention: Backup_DB_yyyyMMdd_HHmmss.zip.
+- **Cloudflare R2 Integration**: Custom Multipart Upload implementation for reliable handling of large files (>64MB), featuring R2-specific compatibility fixes (disabled payload signing and legacy checksums).
+- **Resilience & Stability**:
+  - Built-in retry policies using **Polly** for network and IO transients.
+  - Global exception handling to prevent service crashes.
+  - Automatic local cleanup of .bak and .zip files after successful uploads.
+- **Cross-Platform**: Runs natively on **Ubuntu Server** and **Windows** as a standalone executable.
 
-- orchestrates database backups,
-- compresses backup artifacts using native .NET APIs,
-- and ships them to Cloudflare R2 through an S3-compatible interface.
+## 🛠 Technical Stack
 
-That Sentinel vision is not fully implemented yet. Today, the repository provides the base worker service, container-ready project settings, and the structure needed to grow the system incrementally.
+- **Framework**: .NET 10.0 (Worker Service)
+- **Database**: Microsoft SQL Server
+- **Cloud Storage**: Cloudflare R2 / AWS S3
+- **Libraries**:
+  - AWSSDK.S3: For storage interaction.
+  - Polly: For resilience and retry logic.
+  - Serilog: For structured logging to console and local files.
+  - DotNetEnv: Support for .env files in development.
 
-## Current State
+## ⚙️ Configuration
 
-The application currently contains:
+The service is driven by ppsettings.json or environment variables.
 
-- a `BackgroundService` worker that runs a simple loop,
-- a `Program.cs` entry point that registers the hosted service,
-- a `.NET 10` worker project,
-- Docker support for local container builds,
-- and a basic logging configuration in `appsettings.json`.
+### Example Configuration (ppsettings.json)
 
-## Technical Stack
+`json
+{
+  "LogConfig": {
+    "FolderPath": "Logs",
+    "FileName": "log.txt",
+    "MinimumLevel": "Information"
+  },
+  "Sentinel": {
+    "R2AccessKey": "your_access_key",
+    "R2SecretKey": "your_secret_key",
+    "R2Endpoint": "https://<account_id>.r2.cloudflarestorage.com",
+    "R2BucketName": "backups",
+    "DbConnectionString": "Server=localhost;Database=master;User Id=sa;Password=your_password;TrustServerCertificate=True",
+    "IncludedDatabases": [ "MainDB", "UserDB" ],
+    "BackupIntervalHours": 24
+  },
+  "BackupSchedule": {
+    "RunAtHour": 2,
+    "RunAtMinute": 0
+  },
+  "BackupFolder": "C:\\Backups"
+}
+`
 
-- Framework: .NET 10
-- Project type: Worker Service
-- Hosting: `Microsoft.Extensions.Hosting`
-- Container tooling: `Microsoft.VisualStudio.Azure.Containers.Tools.Targets`
-- Runtime target: Linux container output
-- Language features: nullable reference types and implicit usings enabled
+## 📦 Deployment
 
-## Dependencies
+### Standalone Executables
+The project is configured to generate self-contained, single-file executables that do not require the .NET runtime installed on the host.
 
-Current project dependencies:
+**Build for Windows:**
+`ash
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.8.5
+`
 
-- `Microsoft.Extensions.Hosting` `10.0.8`
-- `Microsoft.VisualStudio.Azure.Containers.Tools.Targets` `1.23.0`
+**Build for Linux (Ubuntu):**
+`ash
+dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.8.5
+`
 
-Planned dependencies for the Sentinel backup workflow:
+## 📜 Author
 
-- `Polly` for retry and resilience policies
-- `DotNetEnv` for `.env` loading
-- `AWSSDK.S3` for Cloudflare R2 compatibility
-- `System.IO.Compression` from the .NET runtime for ZIP compression
+**Luciano Castillo**
 
-## Repository Layout
-
-```text
-R2SentinelBak/
-├── README.md
-├── docker-compose.yml
-├── ghUpload.sh
-├── setup.sh
-└── R2SentinelBak/
-    ├── R2SentinelBak.slnx
-    ├── R2SentinelBak.csproj
-    ├── Program.cs
-    ├── Worker.cs
-    ├── Dockerfile
-    ├── appsettings.json
-    ├── appsettings.Development.json
-    └── Properties/
-        └── launchSettings.json
-```
-
-## Folder Structure
-
-```text
-R2SentinelBak/
-│
-├── R2SentinelBak.slnx              # Solution file
-├── README.md                       # Project documentation
-├── docker-compose.yml              # Container composition placeholder
-├── ghUpload.sh                     # Local shell helper script
-├── setup.sh                        # Local shell helper script
-│
-└── R2SentinelBak/
-    ├── Program.cs                  # Entry point: host creation and DI wiring
-    ├── Worker.cs                   # BackgroundService loop
-    ├── R2SentinelBak.csproj        # Worker project file
-    ├── Dockerfile                  # Container build definition
-    ├── appsettings.json            # Default logging configuration
-    ├── appsettings.Development.json# Development overrides
-    └── Properties/
-        └── launchSettings.json     # Local run/debug settings
-```
-
-## Configuration
-
-The current worker does not require external backup credentials yet. Runtime behavior is driven by the default logging configuration in `appsettings.json`.
-
-If you extend the service toward the Sentinel backup workflow, this is where environment variables or secret-backed settings for things like database connection strings, R2 credentials, bucket names, and scheduling intervals should be documented.
-
-Example `.env` file for the future backup workflow:
-
-```env
-R2_ACCESS_KEY=your_access_key
-R2_SECRET_KEY=your_secret_key
-R2_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com
-R2_BUCKET_NAME=backups
-DB_CONNECTION_STRING=Server=localhost;Database=your_db;Trusted_Connection=True;TrustServerCertificate=True
-BACKUP_INTERVAL_HOURS=24
-```
-
-## Build
-
-From the repository root:
-
-```bash
-dotnet build R2SentinelBak/R2SentinelBak.csproj
-```
-
-## Run Locally
-
-```bash
-dotnet run --project R2SentinelBak/R2SentinelBak.csproj
-```
-
-## Run With Docker
-
-Build the image from the repository root:
-
-```bash
-docker build -f R2SentinelBak/Dockerfile -t r2sentinelbak .
-```
-
-Run the container:
-
-```bash
-docker run --rm r2sentinelbak
-```
-
-## Sentinel Vision
-
-When the backup pipeline is implemented, the service can grow into these slices:
-
-- SQL backup orchestration
-- native compression
-- Cloudflare R2 upload
-- scheduling and retry policy handling
-- logging and operational resilience
-
-Suggested future structure:
-
-```text
-Features/
-├── SqlBackup/
-├── Archiving/
-├── CloudflareR2/
-└── Scheduling/
-
-Infrastructure/
-├── Resilience/
-└── Logging/
-
-Scripts/
-└── DbBackup.dll
-```
-
-## Notes
-
-- The current codebase is a worker template, not the full Sentinel implementation.
-- `docker-compose.yml` is present but still acts as a placeholder.
-- The shell scripts are local helpers and may be intentionally excluded from version control depending on `.gitignore`.
+---
+*Disclaimer: This tool is provided "as is" for database orchestration and backup delivery.*

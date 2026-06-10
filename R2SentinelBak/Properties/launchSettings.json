@@ -5,6 +5,7 @@
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },
+      "commandLineArgs": "--run-once",
       "dotnetRunMessages": true
     },
     "Container (Dockerfile)": {
