@@ -6,6 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-R2SentinelWorker-e8de1e08-b90c-4a92-aa2d-7ca7c02c1712</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <Version>0.8.5</Version>
+    <Authors>Luciano Castillo</Authors>
+    <Company>Luciano Castillo</Company>
+    <Description>Automated SQL Server backup service with Cloudflare R2 integration.</Description>
+    <PackageProjectUrl>https://github.com/lucianocastillo/R2SentinelBak</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
