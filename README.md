@@ -2,7 +2,7 @@
 
 **R2SentinelBak** is a robust, multi-platform .NET 10 background service designed for automated SQL Server database backups and secure delivery to Cloudflare R2 (or any S3-compatible storage).
 
-## 🚀 Features
+##  Features
 
 - **Automated SQL Backups**: Configurable database selection via IncludedDatabases in ppsettings.json.
 - **Intelligent Compression**: Backups are zipped locally using a descriptive naming convention: Backup_DB_yyyyMMdd_HHmmss.zip.
@@ -13,7 +13,7 @@
   - Automatic local cleanup of .bak and .zip files after successful uploads.
 - **Cross-Platform**: Runs natively on **Ubuntu Server** and **Windows** as a standalone executable.
 
-## 🛠 Technical Stack
+##  Technical Stack
 
 - **Framework**: .NET 10.0 (Worker Service)
 - **Database**: Microsoft SQL Server
@@ -24,7 +24,7 @@
   - Serilog: For structured logging to console and local files.
   - DotNetEnv: Support for .env files in development.
 
-## ⚙️ Configuration
+##  Configuration
 
 The service is driven by ppsettings.json or environment variables.
 
@@ -54,7 +54,7 @@ The service is driven by ppsettings.json or environment variables.
 }
 `
 
-## 📦 Deployment
+##  Deployment
 
 ### Standalone Executables
 The project is configured to generate self-contained, single-file executables that do not require the .NET runtime installed on the host.
@@ -69,7 +69,7 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.8.5
 `
 
-## 📜 Author
+##  Author
 
 **Luciano Castillo**
 
