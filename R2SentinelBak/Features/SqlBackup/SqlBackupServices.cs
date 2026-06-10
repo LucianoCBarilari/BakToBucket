@@ -4,27 +4,16 @@ namespace R2SentinelBak.Features.SqlBackup;
 
 public sealed class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupServices
 {
-    public async Task BackupDatabasesAsync(string connectionString, string backupFolder, string getDbs)
+    public async Task BackupDatabasesAsync(string connectionString, string backupFolder, string getDbs, List<string> dbList)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         ArgumentException.ThrowIfNullOrWhiteSpace(backupFolder);
-        ArgumentException.ThrowIfNullOrWhiteSpace(getDbs);
-
-        var dbList = new List<string>();
+        ArgumentException.ThrowIfNullOrWhiteSpace(getDbs);       
 
         try
         {
             using var conn = new SqlConnection(connectionString);
-            await conn.OpenAsync().ConfigureAwait(false);
-
-            using (var cmd = new SqlCommand(getDbs, conn))
-            using (var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false))
-            {
-                while (await reader.ReadAsync().ConfigureAwait(false))
-                {
-                    dbList.Add(reader.GetString(0));
-                }
-            }
+            await conn.OpenAsync().ConfigureAwait(false);          
 
             foreach (var db in dbList)
             {

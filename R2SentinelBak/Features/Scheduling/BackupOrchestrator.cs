@@ -29,11 +29,19 @@ public sealed class BackupOrchestrator(
         backupFolder = Path.GetFullPath(backupFolder);
         Directory.CreateDirectory(backupFolder);
 
-        logger.LogInformation("Starting backup cycle using folder {BackupFolder}.", backupFolder);
+        var databasesToBackup = configuration.GetSection("Sentinel:IncludedDatabases").Get<List<string>>() ?? [];
+
+        if (databasesToBackup.Count == 0)
+        {
+            logger.LogWarning("No databases specified in Sentinel:IncludedDatabases. Skipping backup cycle.");
+            return;
+        }
+
+        logger.LogInformation("Starting backup cycle for {Count} databases using folder {BackupFolder}.", databasesToBackup.Count, backupFolder);
 
         try
         {
-            await sqlBackupServices.BackupDatabasesAsync(connectionString, backupFolder, DefaultGetDbsQuery);
+            await sqlBackupServices.BackupDatabasesAsync(connectionString, backupFolder, DefaultGetDbsQuery, databasesToBackup);
 
             var zipPath = await zipServices.CreateZipAsync(backupFolder, cancellationToken: cancellationToken);
             logger.LogInformation("Backup folder compressed into {ZipPath}.", zipPath);

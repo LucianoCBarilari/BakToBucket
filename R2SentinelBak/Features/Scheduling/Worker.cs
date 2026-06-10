@@ -10,8 +10,15 @@ public class Worker(
     {
         if (runOptions.RunOnce)
         {
-            logger.LogInformation("Run-once mode enabled. Starting backup orchestration immediately.");
-            await orchestrator.RunAsync(stoppingToken);
+            try
+            {
+                logger.LogInformation("Run-once mode enabled. Starting backup orchestration immediately.");
+                await orchestrator.RunAsync(stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogCritical(ex, "Run-once backup orchestration failed.");
+            }
             return;
         }
 

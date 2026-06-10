@@ -30,30 +30,42 @@ public sealed class ZipServices : IZipServices
 
         Directory.CreateDirectory(targetDirectory);
 
-        var zipFileName = File.Exists(sourcePath)
-            ? $"{Path.GetFileNameWithoutExtension(sourcePath)}.zip"
-            : $"{Path.GetFileName(Path.TrimEndingDirectorySeparator(sourcePath))}.zip";
+        var zipFileName = $"Backup_DB_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
 
         var zipFilePath = Path.Combine(targetDirectory, zipFileName);
 
         if (File.Exists(zipFilePath))
         {
-            File.Delete(zipFilePath);
+            try
+            {
+                File.Delete(zipFilePath);
+            }
+            catch (IOException ex)
+            {
+                throw new IOException($"Could not delete existing zip file: {zipFilePath}", ex);
+            }
         }
 
-        if (File.Exists(sourcePath))
+        try
         {
-            using var zipStream = new FileStream(zipFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-            using var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: false);
-            archive.CreateEntryFromFile(sourcePath, Path.GetFileName(sourcePath), CompressionLevel.Optimal);
+            if (File.Exists(sourcePath))
+            {
+                using var zipStream = new FileStream(zipFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                using var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: false);
+                archive.CreateEntryFromFile(sourcePath, Path.GetFileName(sourcePath), CompressionLevel.Optimal);
+            }
+            else
+            {
+                ZipFile.CreateFromDirectory(
+                    sourceDirectoryName: sourcePath,
+                    destinationArchiveFileName: zipFilePath,
+                    compressionLevel: CompressionLevel.Optimal,
+                    includeBaseDirectory: false);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            ZipFile.CreateFromDirectory(
-                sourceDirectoryName: sourcePath,
-                destinationArchiveFileName: zipFilePath,
-                compressionLevel: CompressionLevel.Optimal,
-                includeBaseDirectory: false);
+            throw new InvalidOperationException($"Failed to create zip file at {zipFilePath}", ex);
         }
 
         return Task.FromResult(zipFilePath);

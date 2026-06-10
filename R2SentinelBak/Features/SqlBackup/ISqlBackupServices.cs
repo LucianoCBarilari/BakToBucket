@@ -2,5 +2,5 @@
 
 public interface ISqlBackupServices
 {
-    public Task BackupDatabasesAsync(string connectionString, string backupFolder, string getDbs);
+    public Task BackupDatabasesAsync(string connectionString, string backupFolder, string getDbs, List<string> dbList);
 }
