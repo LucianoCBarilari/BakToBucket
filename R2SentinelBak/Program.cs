@@ -11,6 +11,11 @@ using Serilog;
 try
 {
     var builder = Host.CreateApplicationBuilder(args);
+    builder.Services.AddWindowsService(options =>
+    {
+        options.ServiceName = "R2SentinelBak";
+    });
+    
     var runOnce = args.Any(arg => string.Equals(arg, "--run-once", StringComparison.OrdinalIgnoreCase));
     var isDevelopment = builder.Environment.IsDevelopment();
 
@@ -20,15 +25,12 @@ try
     if (isDevelopment)
     {
         Env.Load();
-        builder.Configuration
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-            .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
-            .AddEnvironmentVariables();
     }
-    else
-    {
-        builder.Configuration.AddEnvironmentVariables();
-    }
+
+    builder.Configuration
+        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+        .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+        .AddEnvironmentVariables();
 
     builder.AddLoggingCore();
     builder.Services.AddSingleton<PolicyRegistry>();
