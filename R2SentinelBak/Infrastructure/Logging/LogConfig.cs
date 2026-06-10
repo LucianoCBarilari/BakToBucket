@@ -6,7 +6,7 @@ public class LogConfig
 {
     public const string SectionName = "LogConfig";
 
-    public string FolderPath { get; init; } = "NucleoSeguro";
+    public string FolderPath { get; init; } = "Logs";
 
     public string FileName { get; init; } = "log.txt";
 

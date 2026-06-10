@@ -46,9 +46,17 @@ public sealed class BackupOrchestrator(
             }
             finally
             {
-                if (uploaded && File.Exists(zipPath))
+                if (uploaded)
                 {
-                    File.Delete(zipPath);
+                    if (File.Exists(zipPath)) File.Delete(zipPath);
+                    
+                    // Cleanup individual .bak files
+                    var bakFiles = Directory.GetFiles(backupFolder, "*.bak");
+                    foreach (var bakFile in bakFiles)
+                    {
+                        try { File.Delete(bakFile); } catch { /* ignore */ }
+                    }
+                    logger.LogInformation("Cleaned up local backup files.");
                 }
             }
         }

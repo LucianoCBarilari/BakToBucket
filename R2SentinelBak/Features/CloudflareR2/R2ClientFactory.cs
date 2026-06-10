@@ -30,7 +30,9 @@ public sealed class R2ClientFactory(IConfiguration configuration)
         var config = new AmazonS3Config
         {
             ServiceURL = endpoint,
-            ForcePathStyle = true
+            ForcePathStyle = true,
+            Timeout = TimeSpan.FromMinutes(10),
+            RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED
         };
 
         return new AmazonS3Client(credentials, config);
