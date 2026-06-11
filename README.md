@@ -75,3 +75,18 @@ dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFil
 
 ---
 *Disclaimer: This tool is provided "as is" for database orchestration and backup delivery.*
+
+
+## 🔐 Database Security
+
+When running as a **Windows Service**, the application defaults to the `NT AUTHORITY\SYSTEM` account, which lacks backup permissions by default (Error 916). 
+
+For production environments, it is **strongly recommended** to use a dedicated SQL Server user instead of Integrated Security.
+
+### Setting up a Backup User
+1. Locate the script in `Scripts/CreateBackupUser.sql`.
+2. Execute it on your SQL Server instance to create the `R2SentinelUser`.
+3. Update your connection string in `appsettings.json`:
+
+```json
+"DbConnectionString": "Server=localhost;Database=master;User Id=R2SentinelUser;Password=YourSecurePassword123!;TrustServerCertificate=True"`n```
