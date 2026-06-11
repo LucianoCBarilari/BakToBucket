@@ -1,4 +1,4 @@
-# R2SentinelBak v0.8.5
+# R2SentinelBak v0.9.0
 
 **R2SentinelBak** is a robust, multi-platform .NET 10 background service designed for automated SQL Server database backups and secure delivery to Cloudflare R2 (or any S3-compatible storage).
 
@@ -61,12 +61,12 @@ The project is configured to generate self-contained, single-file executables th
 
 **Build for Windows:**
 `ash
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.8.5
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.9.0
 `
 
 **Build for Linux (Ubuntu):**
 `ash
-dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.8.5
+dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.9.0
 `
 
 ##  Author

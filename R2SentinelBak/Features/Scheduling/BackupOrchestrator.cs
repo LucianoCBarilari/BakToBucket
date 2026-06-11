@@ -38,17 +38,17 @@ public sealed class BackupOrchestrator(
         }
 
         logger.LogInformation("Starting backup cycle for {Count} databases using folder {BackupFolder}.", databasesToBackup.Count, backupFolder);
-        
-        var zipPath = await zipServices.CreateZipAsync(backupFolder, hostName, "", cancellationToken: cancellationToken);
+
+        string zipPath = string.Empty;        
         try
         {
             await sqlBackupServices.BackupDatabasesAsync(connectionString, backupFolder,  databasesToBackup);
             
+            zipPath = await zipServices.CreateZipAsync(backupFolder, hostName, "", cancellationToken: cancellationToken);
+            
             logger.LogInformation("Backup folder compressed into {ZipPath}.", zipPath);
 
-            await uploader.UploadBackupAsync(zipPath, cancellationToken);
-
-            CleanupLocalFiles(zipPath, backupFolder);
+            await uploader.UploadBackupAsync(zipPath, cancellationToken);            
         }
         catch (Exception ex)
         {
@@ -57,18 +57,24 @@ public sealed class BackupOrchestrator(
         }
         finally
         {
-            CleanupLocalFiles(zipPath, backupFolder);
+            CleanupLocalFiles(zipPath, backupFolder);            
         }
     }
 
     private void CleanupLocalFiles(string zipPath, string backupFolder)
     {
         if (File.Exists(zipPath))
-            File.Delete(zipPath);
+                File.Delete(zipPath);
 
         foreach (var bak in Directory.GetFiles(backupFolder, "*.bak"))
         {
-            try { File.Delete(bak); } catch (Exception ex) { logger.LogWarning(ex, "Could not delete {File}.", bak); }
+            try 
+            { 
+                File.Delete(bak); 
+            } catch (Exception ex) 
+            {
+                logger.LogWarning(ex, "Could not delete {File}.", bak); 
+            }
         }
 
         logger.LogInformation("Cleaned up local backup files.");
