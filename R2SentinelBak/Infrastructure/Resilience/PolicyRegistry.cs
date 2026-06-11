@@ -23,7 +23,6 @@ public sealed class PolicyRegistry
                     .Handle<HttpRequestException>()
                     .Handle<IOException>()
                     .Handle<SocketException>()
-                    .Handle<TaskCanceledException>()
                     .Handle<AmazonServiceException>(IsTransientAwsError),
                 OnRetry = args =>
                 {

@@ -10,8 +10,7 @@ public sealed class BackupOrchestrator(
     Uploader uploader,
     IConfiguration configuration,
     ILogger<BackupOrchestrator> logger)
-{
-    private const string DefaultGetDbsQuery = "SELECT name FROM sys.databases WHERE database_id > 4 AND state_desc = 'ONLINE'";
+{ 
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
@@ -39,12 +38,12 @@ public sealed class BackupOrchestrator(
         }
 
         logger.LogInformation("Starting backup cycle for {Count} databases using folder {BackupFolder}.", databasesToBackup.Count, backupFolder);
-
+        
+        var zipPath = await zipServices.CreateZipAsync(backupFolder, hostName, "", cancellationToken: cancellationToken);
         try
         {
-            await sqlBackupServices.BackupDatabasesAsync(connectionString, backupFolder, DefaultGetDbsQuery, databasesToBackup);
-
-            var zipPath = await zipServices.CreateZipAsync(backupFolder, hostName, "", cancellationToken: cancellationToken);
+            await sqlBackupServices.BackupDatabasesAsync(connectionString, backupFolder,  databasesToBackup);
+            
             logger.LogInformation("Backup folder compressed into {ZipPath}.", zipPath);
 
             await uploader.UploadBackupAsync(zipPath, cancellationToken);
@@ -55,6 +54,10 @@ public sealed class BackupOrchestrator(
         {
             logger.LogError(ex, "Backup orchestration failed.");
             throw;
+        }
+        finally
+        {
+            CleanupLocalFiles(zipPath, backupFolder);
         }
     }
 
