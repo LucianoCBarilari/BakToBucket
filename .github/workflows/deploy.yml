@@ -2,7 +2,8 @@ name: Release Binaries
 
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*'
 
 jobs:
   release:
@@ -13,38 +14,42 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Get version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 10.0.x
 
     - name: Publish for Windows
-      run: dotnet publish R2SentinelBak/R2SentinelBak.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.8.5 -o ./publish/windows
+      run: dotnet publish R2SentinelBak/R2SentinelBak.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=${{ steps.get_version.outputs.VERSION }} -o ./publish/windows
 
     - name: Publish for Linux
-      run: dotnet publish R2SentinelBak/R2SentinelBak.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.8.5 -o ./publish/linux
+      run: dotnet publish R2SentinelBak/R2SentinelBak.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=${{ steps.get_version.outputs.VERSION }} -o ./publish/linux
 
     - name: Zip Windows Release
       run: |
         cd publish/windows
-        zip -r ../../R2SentinelBak_v0.8.5_win-x64.zip .
+        zip -r ../../R2SentinelBak_v${{ steps.get_version.outputs.VERSION }}_win-x64.zip .
         cd ../..
 
     - name: Zip Linux Release
       run: |
         cd publish/linux
         chmod +x R2SentinelBak
-        tar -czvf ../../R2SentinelBak_v0.8.5_linux-x64.tar.gz .
+        tar -czvf ../../R2SentinelBak_v${{ steps.get_version.outputs.VERSION }}_linux-x64.tar.gz .
         cd ../..
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v0.8.5
-        name: Release v0.8.5
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
         files: |
-          R2SentinelBak_v0.8.5_win-x64.zip
-          R2SentinelBak_v0.8.5_linux-x64.tar.gz
+          R2SentinelBak_v${{ steps.get_version.outputs.VERSION }}_win-x64.zip
+          R2SentinelBak_v${{ steps.get_version.outputs.VERSION }}_linux-x64.tar.gz
         draft: false
         prerelease: false
       env:

@@ -1,14 +1,18 @@
 using Microsoft.Data.SqlClient;
+using System.Text.RegularExpressions;
 
 namespace R2SentinelBak.Features.SqlBackup;
 
-public sealed class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupServices
+public class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupServices
 {
-    public async Task BackupDatabasesAsync(string connectionString, string backupFolder, string getDbs, List<string> dbList)
+    private static readonly Regex DatabaseNameRegex = new(@"^[a-zA-Z0-9_\-]+$", RegexOptions.Compiled);
+    public async Task BackupDatabasesAsync(string connectionString, string backupFolder,List<string> dbList)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         ArgumentException.ThrowIfNullOrWhiteSpace(backupFolder);
-        ArgumentException.ThrowIfNullOrWhiteSpace(getDbs);       
+
+        backupFolder = Path.GetFullPath(backupFolder);
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
 
         try
         {
@@ -17,12 +21,23 @@ public sealed class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlB
 
             foreach (var db in dbList)
             {
-                var backupFile = Path.Combine(backupFolder, $"{db}_{DateTime.Now:yyyyMMdd_HHmmss}.bak");
-                var backupSql = $"BACKUP DATABASE [{db}] TO DISK = '{backupFile}' WITH FORMAT, INIT;";
+                ValidateDatabaseName(db);
+
+                var backupFile = Path.Combine(
+                    backupFolder,
+                    $"{db}_{timestamp}.bak");
+
+                var safeDb = EscapeSqlIdentifier(db);
+                var safeBackupFile = EscapeSqlLiteral(backupFile);
+
+                var backupSql =
+                    $"BACKUP DATABASE [{safeDb}] " +
+                    $"TO DISK = '{safeBackupFile}' " +
+                    $"WITH FORMAT, INIT;";
 
                 using var backupCmd = new SqlCommand(backupSql, conn)
                 {
-                    CommandTimeout = 0
+                    CommandTimeout = 3600
                 };
 
                 await backupCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
@@ -47,6 +62,27 @@ public sealed class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlB
         }
     }
 
+    private static void ValidateDatabaseName(string dbName)
+    {
+        if (string.IsNullOrWhiteSpace(dbName))
+            throw new InvalidOperationException(
+                "Database name cannot be empty.");
+
+        if (!DatabaseNameRegex.IsMatch(dbName))
+            throw new InvalidOperationException(
+                $"Invalid database name: {dbName}");
+    }
+
+    private static string EscapeSqlIdentifier(string value)
+    {
+        return value.Replace("]", "]]");
+    }
+
+    private static string EscapeSqlLiteral(string value)
+    {
+        return value.Replace("'", "''");
+    }
+
     private void LogSqlException(SqlException ex)
     {
         switch (ex.Number)
@@ -54,24 +90,34 @@ public sealed class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlB
             case 2:
                 logger.LogError(ex, "Server not found or timeout.");
                 break;
+
             case 18456:
                 logger.LogError(ex, "Login failed for user.");
                 break;
+
             case 945:
                 logger.LogError(ex, "Database unavailable.");
                 break;
+
             case 3201:
                 logger.LogError(ex, "Backup path error.");
                 break;
+
             case 3013:
                 logger.LogError(ex, "Backup terminated unexpectedly.");
                 break;
+
             case 1105:
                 logger.LogError(ex, "Disk is full.");
                 break;
+
             default:
-                logger.LogError(ex, "SQL Error {ErrorNumber}.", ex.Number);
+                logger.LogError(ex,
+                    "SQL Error {ErrorNumber}.",
+                    ex.Number);
                 break;
         }
     }
 }
+    
+
