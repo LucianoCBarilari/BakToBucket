@@ -50,10 +50,10 @@ public sealed class Uploader(
             cancellationToken);
     }
 
-    private static async Task PutObjectAsync(
-        IAmazonS3 client, string bucket, string key, string filePath, CancellationToken token)
+    private static async Task PutObjectAsync(IAmazonS3 client, string bucket, string key, string filePath, CancellationToken token)
     {
-        await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1 * 1024 * 1024, useAsync: true);
+        const int bufferSize = 1 * 1024 * 1024; // 1 MB
+        await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, useAsync: true);
 
         var request = new PutObjectRequest
         {
@@ -68,8 +68,7 @@ public sealed class Uploader(
         await client.PutObjectAsync(request, token).ConfigureAwait(false);
     }
 
-    private async Task MultipartUploadAsync(
-        IAmazonS3 client, string bucket, string key, string filePath, long fileSize, CancellationToken token)
+    private async Task MultipartUploadAsync(IAmazonS3 client, string bucket, string key, string filePath, long fileSize, CancellationToken token)
     {
         // Initiate
         var initResponse = await client.InitiateMultipartUploadAsync(new InitiateMultipartUploadRequest
@@ -84,7 +83,8 @@ public sealed class Uploader(
 
         try
         {
-            await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1 * 1024 * 1024, useAsync: true);
+            const int bufferSize = 1 * 1024 * 1024; // 1 MB
+            await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, useAsync: true);
 
             int partNumber = 1;
             long bytesLeft = fileSize;
@@ -124,16 +124,17 @@ public sealed class Uploader(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Multipart upload failed, aborting upload {UploadId}...", uploadId);
-
-            // Always clean up incomplete multipart uploads — R2 charges for stored parts
-            await client.AbortMultipartUploadAsync(new AbortMultipartUploadRequest
-            {
-                BucketName = bucket,
-                Key = key,
-                UploadId = uploadId,
-            }, CancellationToken.None).ConfigureAwait(false);
-
+            await AbortMultipartUploadAsync(client, bucket, key, uploadId);
             throw;
         }
+    }
+    private async Task AbortMultipartUploadAsync(IAmazonS3 client, string bucket, string key, string uploadId)
+    {
+        await client.AbortMultipartUploadAsync(new AbortMultipartUploadRequest
+        {
+            BucketName = bucket,
+            Key = key,
+            UploadId = uploadId,
+        }, CancellationToken.None).ConfigureAwait(false);
     }
 }

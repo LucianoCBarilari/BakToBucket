@@ -15,18 +15,19 @@ public sealed class BackupOrchestrator(
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
+        var hostName = configuration["BackupHostName"] ?? Environment.MachineName;
         var connectionString = configuration["Sentinel:DbConnectionString"];
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException("Sentinel:DbConnectionString is required.");
-        }
 
+        if (string.IsNullOrWhiteSpace(connectionString))        
+            throw new InvalidOperationException("Sentinel:DbConnectionString is required.");
+        
+        
         var backupFolder = configuration["BackupFolder"];
-        backupFolder = string.IsNullOrWhiteSpace(backupFolder)
-            ? Path.Combine(AppContext.BaseDirectory, "Backup")
-            : backupFolder;
+        
+        backupFolder = string.IsNullOrWhiteSpace(backupFolder) ? Path.Combine(AppContext.BaseDirectory, "Backup") : backupFolder;
 
         backupFolder = Path.GetFullPath(backupFolder);
+
         Directory.CreateDirectory(backupFolder);
 
         var databasesToBackup = configuration.GetSection("Sentinel:IncludedDatabases").Get<List<string>>() ?? [];
@@ -43,35 +44,30 @@ public sealed class BackupOrchestrator(
         {
             await sqlBackupServices.BackupDatabasesAsync(connectionString, backupFolder, DefaultGetDbsQuery, databasesToBackup);
 
-            var zipPath = await zipServices.CreateZipAsync(backupFolder, cancellationToken: cancellationToken);
+            var zipPath = await zipServices.CreateZipAsync(backupFolder, hostName, "", cancellationToken: cancellationToken);
             logger.LogInformation("Backup folder compressed into {ZipPath}.", zipPath);
 
-            var uploaded = false;
-            try
-            {
-                await uploader.UploadBackupAsync(zipPath, cancellationToken);
-                uploaded = true;
-            }
-            finally
-            {
-                if (uploaded)
-                {
-                    if (File.Exists(zipPath)) File.Delete(zipPath);
-                    
-                    // Cleanup individual .bak files
-                    var bakFiles = Directory.GetFiles(backupFolder, "*.bak");
-                    foreach (var bakFile in bakFiles)
-                    {
-                        try { File.Delete(bakFile); } catch { /* ignore */ }
-                    }
-                    logger.LogInformation("Cleaned up local backup files.");
-                }
-            }
+            await uploader.UploadBackupAsync(zipPath, cancellationToken);
+
+            CleanupLocalFiles(zipPath, backupFolder);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Backup orchestration failed.");
             throw;
         }
+    }
+
+    private void CleanupLocalFiles(string zipPath, string backupFolder)
+    {
+        if (File.Exists(zipPath))
+            File.Delete(zipPath);
+
+        foreach (var bak in Directory.GetFiles(backupFolder, "*.bak"))
+        {
+            try { File.Delete(bak); } catch (Exception ex) { logger.LogWarning(ex, "Could not delete {File}.", bak); }
+        }
+
+        logger.LogInformation("Cleaned up local backup files.");
     }
 }

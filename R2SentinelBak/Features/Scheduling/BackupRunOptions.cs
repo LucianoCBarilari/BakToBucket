@@ -1,6 +1,3 @@
 namespace R2SentinelBak.Features.Scheduling;
 
-public sealed class BackupRunOptions
-{
-    public bool RunOnce { get; init; }
-}
+public  record BackupRunOptions(bool RunOnce);
