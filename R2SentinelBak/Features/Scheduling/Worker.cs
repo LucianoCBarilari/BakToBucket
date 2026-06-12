@@ -1,81 +1,63 @@
 namespace R2SentinelBak.Features.Scheduling;
-    
+
 public class Worker(
     ILogger<Worker> logger,
     BackupOrchestrator orchestrator,
     IConfiguration configuration,
     BackupRunOptions runOptions) : BackgroundService
 {
+    private readonly int _runAtHour = ValidateRange(configuration.GetValue<int?>("BackupSchedule:RunAtHour") ?? 2, 0, 23, "BackupSchedule:RunAtHour");
+    private readonly int _runAtMinute = ValidateRange(configuration.GetValue<int?>("BackupSchedule:RunAtMinute") ?? 0, 0, 59, "BackupSchedule:RunAtMinute");
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (runOptions.RunOnce)
         {
-            try
+            logger.LogInformation("Run-once mode enabled. Starting backup orchestration immediately.");
+            try 
             {
-                logger.LogInformation("Run-once mode enabled. Starting backup orchestration immediately.");
-                await orchestrator.RunAsync(stoppingToken);
+                await orchestrator.RunAsync(stoppingToken); 
             }
-            catch (Exception ex)
-            {
-                logger.LogCritical(ex, "Run-once backup orchestration failed.");
+            catch (Exception ex) 
+            { 
+                logger.LogCritical(ex, "Run-once backup orchestration failed."); 
             }
             return;
         }
 
-        var runAtHour = configuration.GetValue<int?>("BackupSchedule:RunAtHour") ?? 2;
-        var runAtMinute = configuration.GetValue<int?>("BackupSchedule:RunAtMinute") ?? 0;
-
-        if (runAtHour is < 0 or > 23)
-        {
-            throw new InvalidOperationException("BackupSchedule:RunAtHour must be between 0 and 23.");
-        }
-
-        if (runAtMinute is < 0 or > 59)
-        {
-            throw new InvalidOperationException("BackupSchedule:RunAtMinute must be between 0 and 59.");
-        }
-
         while (!stoppingToken.IsCancellationRequested)
         {
-            var nextRun = GetNextRunTime(DateTime.Now, runAtHour, runAtMinute);
-            var delay = nextRun - DateTime.Now;
+            var nextRun = GetNextRunTime(DateTime.Now, _runAtHour, _runAtMinute);
+            logger.LogInformation("Next backup run scheduled at {NextRun}.", nextRun);
+            await Task.Delay(nextRun - DateTime.Now, stoppingToken);
 
-            if (delay > TimeSpan.Zero)
+            try 
             {
-                logger.LogInformation("Next backup run scheduled at {NextRun}.", nextRun);
-                await Task.Delay(delay, stoppingToken);
+                await orchestrator.RunAsync(stoppingToken); 
             }
-
-            try
-            {
-                logger.LogInformation("Starting scheduled backup orchestration at: {time}", DateTimeOffset.Now);
-                await orchestrator.RunAsync(stoppingToken);
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) 
+            { 
+                break; 
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
+            catch (Exception ex) 
+            { 
+                logger.LogError(ex, "Backup cycle failed."); 
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Backup cycle failed.");
-            }
-
         }
     }
 
-    private static DateTime GetNextRunTime(DateTime now, int runAtHour, int runAtMinute)
+    private static DateTime GetNextRunTime(DateTime now, int hour, int minute)
     {
-        var nextRun = now.Date
-            .AddHours(runAtHour)
-            .AddMinutes(runAtMinute);
-
-        if (now >= nextRun)
-        {
-            nextRun = nextRun.AddDays(1);
-        }
-
-        return nextRun;
+        var next = now.Date.AddHours(hour).AddMinutes(minute);
+        return now >= next ? next.AddDays(1) : next;
     }
-}
-    
 
+    private static int ValidateRange(int value, int min, int max, string key)
+    {
+        if (value < min || value > max)
+            throw new InvalidOperationException($"{key} must be between {min} and {max}.");
+
+        return value;
+    }
+
+}

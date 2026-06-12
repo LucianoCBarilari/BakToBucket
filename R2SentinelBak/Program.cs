@@ -8,6 +8,9 @@ using R2SentinelBak.Infrastructure.Resilience;
 
 using Serilog;
 
+Log.Logger = new LoggerConfiguration()
+        .WriteTo.Console()
+        .CreateBootstrapLogger();
 try
 {
     var builder = Host.CreateApplicationBuilder(args);
@@ -15,22 +18,15 @@ try
     {
         options.ServiceName = "R2SentinelBak";
     });
-    
-    var runOnce = args.Any(arg => string.Equals(arg, "--run-once", StringComparison.OrdinalIgnoreCase));
-    var isDevelopment = builder.Environment.IsDevelopment();
+    builder.Services.AddSystemd();
 
-    builder.Configuration.Sources.Clear();
-    builder.Configuration.SetBasePath(AppContext.BaseDirectory);
+    var isDevelopment = builder.Environment.IsDevelopment();
+    var runOnce = args.Any(arg => string.Equals(arg, "--run-once", StringComparison.OrdinalIgnoreCase));    
 
     if (isDevelopment)
     {
         Env.Load();
-    }
-
-    builder.Configuration
-        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-        .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
-        .AddEnvironmentVariables();
+    }  
 
     builder.AddLoggingCore();
     builder.Services.AddSingleton<PolicyRegistry>();
@@ -39,7 +35,7 @@ try
     builder.Services.AddTransient<Uploader>();
     builder.Services.AddTransient<IZipServices, ZipServices>();
     builder.Services.AddTransient<BackupOrchestrator>();
-    builder.Services.AddSingleton(new BackupRunOptions { RunOnce = runOnce });
+    builder.Services.AddSingleton(new BackupRunOptions(runOnce));
     builder.Services.AddHostedService<Worker>();
 
     var host = builder.Build();
