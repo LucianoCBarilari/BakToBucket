@@ -33,7 +33,7 @@ public sealed class PolicyRegistry
             .Build();
     }
 
-    private static bool IsTransientAwsError(AmazonServiceException exception)
+    public static bool IsTransientAwsError(AmazonServiceException exception)
     {
         return exception.StatusCode is HttpStatusCode.RequestTimeout
             or HttpStatusCode.TooManyRequests

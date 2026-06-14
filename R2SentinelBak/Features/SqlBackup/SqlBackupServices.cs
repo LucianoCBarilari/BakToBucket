@@ -62,7 +62,7 @@ public class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupSe
         }
     }
 
-    private static void ValidateDatabaseName(string dbName)
+    public static void ValidateDatabaseName(string dbName)
     {
         if (string.IsNullOrWhiteSpace(dbName))
             throw new InvalidOperationException(
