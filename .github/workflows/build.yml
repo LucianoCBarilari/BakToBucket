@@ -19,7 +19,10 @@ jobs:
         dotnet-version: 10.0.x
 
     - name: Restore dependencies
-      run: dotnet restore R2SentinelBak/R2SentinelBak.csproj
+      run: dotnet restore
 
     - name: Build
-      run: dotnet build R2SentinelBak/R2SentinelBak.csproj --no-restore -c Release
+      run: dotnet build --no-restore -c Release
+
+    - name: Test
+      run: dotnet test --no-build -c Release --verbosity normal
