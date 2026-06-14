@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="R2SentinelBak.Tests/R2SentinelBak.Tests.csproj" />
   <Project Path="R2SentinelBak/R2SentinelBak.csproj" />
 </Solution>
