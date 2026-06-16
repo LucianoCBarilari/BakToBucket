@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+
 namespace R2SentinelBak.Features.Scheduling;
 
 public class Worker(
