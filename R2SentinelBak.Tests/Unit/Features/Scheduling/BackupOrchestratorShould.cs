@@ -20,13 +20,18 @@ public class BackupOrchestratorShould
         var appOptions = Options.Create(new AppOptions { DatabaseType = "SqlServer" });
         var connOptions = Options.Create(new ConnectionStringsOptions { SqlServer = "Server=test" });
         var retentionOptions = Options.Create(new RetentionOptions { MaxBucketSizeGB = 10 });
+        var storageOptions = Options.Create(new StorageOptions { BucketName = "test-bucket", AccessKey = "k", SecretKey = "s", Endpoint = "e" });
         
         var mockProvider = new FakeBackupProvider("SqlServer");
         
         _orchestrator = new BackupOrchestrator(
             new[] { mockProvider },
             new FakeZipServices(),
-            new Uploader(new R2ClientFactory(new ConfigurationBuilder().Build()), new PolicyRegistry(new LoggerFactory().CreateLogger<PolicyRegistry>()), new ConfigurationBuilder().Build(), new LoggerFactory().CreateLogger<Uploader>()),
+            new Uploader(
+                new R2ClientFactory(storageOptions), 
+                new PolicyRegistry(new LoggerFactory().CreateLogger<PolicyRegistry>()), 
+                storageOptions, 
+                new LoggerFactory().CreateLogger<Uploader>()),
             appOptions,
             connOptions,
             retentionOptions,
@@ -59,7 +64,8 @@ public class BackupOrchestratorShould
 
     private class FakeZipServices : IZipServices
     {
-        public Task<string> CreateZipAsync(string folder, string host, string tag, CancellationToken cancellationToken) => Task.FromResult("test.zip");
+        public Task<string> CreateZipAsync(string sourcePath, string hostName, string? outputDirectory, CancellationToken cancellationToken = default) 
+            => Task.FromResult("test.zip");
     }
 
     private class FakeBucketSizeChecker : IBucketSizeChecker
