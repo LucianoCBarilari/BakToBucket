@@ -24,14 +24,15 @@ public class BackupOrchestratorShould
         
         var mockProvider = new FakeBackupProvider("SqlServer");
         
+        // Explicit instantiation to debug and resolve CS1503
+        var r2ClientFactory = new R2ClientFactory(storageOptions);
+        var policyRegistry = new PolicyRegistry(new LoggerFactory().CreateLogger<PolicyRegistry>());
+        var uploader = new Uploader(r2ClientFactory, policyRegistry, storageOptions, new LoggerFactory().CreateLogger<Uploader>());
+
         _orchestrator = new BackupOrchestrator(
             new[] { mockProvider },
             new FakeZipServices(),
-            new Uploader(
-                new R2ClientFactory(storageOptions), 
-                new PolicyRegistry(new LoggerFactory().CreateLogger<PolicyRegistry>()), 
-                storageOptions, 
-                new LoggerFactory().CreateLogger<Uploader>()),
+            uploader,
             appOptions,
             connOptions,
             retentionOptions,
