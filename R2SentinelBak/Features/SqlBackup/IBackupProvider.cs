@@ -1,4 +1,4 @@
-namespace R2SentinelBak.Features.Backup;
+namespace R2SentinelBak.Features.SqlBackup;
 
 public interface IBackupProvider
 {

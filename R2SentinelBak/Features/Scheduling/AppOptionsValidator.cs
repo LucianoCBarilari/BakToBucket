@@ -13,6 +13,15 @@ public class AppOptionsValidator(IConfiguration configuration) : IValidateOption
         if (string.IsNullOrWhiteSpace(options.BackupFolder))
             return ValidateOptionsResult.Fail("AppOptions:BackupFolder is required.");
 
+        if (options.BackupIntervalHours < 1 || options.BackupIntervalHours > 744)
+            return ValidateOptionsResult.Fail("AppOptions:BackupIntervalHours must be between 1 and 744.");
+
+        if (options.Schedule.RunAtHour < 0 || options.Schedule.RunAtHour > 23)
+            return ValidateOptionsResult.Fail("AppOptions:Schedule:RunAtHour must be between 0 and 23.");
+
+        if (options.Schedule.RunAtMinute < 0 || options.Schedule.RunAtMinute > 59)
+            return ValidateOptionsResult.Fail("AppOptions:Schedule:RunAtMinute must be between 0 and 59.");
+
         var connStrings = configuration.GetSection("ConnectionStrings");
 
         if (options.DatabaseType.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))

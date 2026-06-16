@@ -46,14 +46,20 @@ try
         .BindConfiguration("ConnectionStrings")
         .ValidateOnStart();
 
+    builder.Services.AddOptions<RetentionOptions>()
+        .BindConfiguration("RetentionOptions")
+        .ValidateOnStart();
+    builder.Services.AddSingleton<IValidateOptions<RetentionOptions>, RetentionOptionsValidator>();
+
 
     // Register Diagnostics
     builder.Services.AddSingleton<IDatabasePing, SqlDatabasePinger>();
+    builder.Services.AddSingleton<IBucketSizeChecker, R2BucketSizeChecker>();
     builder.Services.AddSingleton<StartupSanityCheck>();
 
     builder.Services.AddSingleton<PolicyRegistry>();
     builder.Services.AddSingleton<R2ClientFactory>();
-    builder.Services.AddSingleton<ISqlBackupServices, SqlBackupServices>();
+    builder.Services.AddSingleton<IBackupProvider, SqlBackupProvider>();
     builder.Services.AddTransient<Uploader>();
     builder.Services.AddTransient<IZipServices, ZipServices>();
     builder.Services.AddTransient<BackupOrchestrator>();
