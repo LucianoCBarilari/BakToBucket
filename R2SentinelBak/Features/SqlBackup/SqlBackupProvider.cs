@@ -6,7 +6,7 @@ namespace R2SentinelBak.Features.SqlBackup;
 public class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupServices
 {
     private static readonly Regex DatabaseNameRegex = new(@"^[a-zA-Z0-9_\-]+$", RegexOptions.Compiled);
-    public async Task BackupDatabasesAsync(string connectionString, string backupFolder,List<string> dbList)
+    public async Task BackupDatabasesAsync(string connectionString, string backupFolder, List<string> dbList)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         ArgumentException.ThrowIfNullOrWhiteSpace(backupFolder);
@@ -17,7 +17,7 @@ public class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupSe
         try
         {
             using var conn = new SqlConnection(connectionString);
-            await conn.OpenAsync().ConfigureAwait(false);          
+            await conn.OpenAsync().ConfigureAwait(false);
 
             foreach (var db in dbList)
             {
@@ -119,5 +119,3 @@ public class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupSe
         }
     }
 }
-    
-
