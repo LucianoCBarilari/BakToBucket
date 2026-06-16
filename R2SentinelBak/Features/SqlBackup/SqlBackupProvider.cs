@@ -55,6 +55,14 @@ public class SqlBackupProvider(ILogger<SqlBackupProvider> logger) : IBackupProvi
 
                 await backupCmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
 
+                var verifySql = $"RESTORE VERIFYONLY FROM DISK = '{safeBackupFile}';";
+                using var verifyCmd = new SqlCommand(verifySql, conn)
+                {
+                    CommandTimeout = 3600
+                };
+                await verifyCmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+
+                logger.LogInformation("Backup integrity verified for {DatabaseName}.", db);
                 logger.LogInformation("Backed up database {DatabaseName} to {BackupFile}.", db, backupFile);    
             }
         }

@@ -1,5 +1,4 @@
 /*
-
 # SQL Server - Development Backup User Setup
 
 PURPOSE
@@ -28,37 +27,37 @@ GO
 
 -- Creates the server login if it does not already exist
 IF NOT EXISTS (
-SELECT 1
-FROM sys.server_principals
-WHERE name = 'backup_user'
+    SELECT 1
+    FROM sys.server_principals
+    WHERE name = 'backup_user'
 )
 BEGIN
-PRINT 'Creating login backup_user...';
+    PRINT 'Creating login backup_user...';
 
-```
-CREATE LOGIN [backup_user]
-WITH PASSWORD = '<REPLACE_WITH_STRONG_PASSWORD>',
-     CHECK_POLICY = OFF,
-     CHECK_EXPIRATION = OFF;
-```
-
+    CREATE LOGIN [backup_user]
+    WITH PASSWORD = '<REPLACE_WITH_STRONG_PASSWORD>',
+         CHECK_POLICY = OFF,
+         CHECK_EXPIRATION = OFF;
 END
 ELSE
 BEGIN
-PRINT 'Login backup_user already exists.';
+    PRINT 'Login backup_user already exists.';
 END
+GO
+
+-- Grant permissions for backup and verification
+-- dbcreator role is required to perform backups and integrity verification (RESTORE VERIFYONLY)
+ALTER SERVER ROLE [dbcreator] ADD MEMBER [backup_user];
 GO
 
 -- Allows the login to discover available databases
 GRANT VIEW ANY DATABASE TO [backup_user];
 GO
 
-# /*
-
+/*
 Maps the login to every online non-system database and grants membership in
 the db_backupoperator role, allowing database backups.
 ======================================================
-
 */
 
 DECLARE @sql NVARCHAR(MAX);
@@ -76,10 +75,9 @@ FETCH NEXT FROM db_cursor INTO @dbName;
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
-SET @sql = N'
-USE [' + REPLACE(@dbName, ']', ']]') + N'];
+    SET @sql = N'
+    USE [' + REPLACE(@dbName, ']', ']]') + N'];
 
-```
     IF NOT EXISTS (
         SELECT 1
         FROM sys.database_principals
@@ -94,13 +92,11 @@ USE [' + REPLACE(@dbName, ']', ']]') + N'];
 
     ALTER ROLE [db_backupoperator]
     ADD MEMBER [backup_user];
-';
+    ';
 
-EXEC sp_executesql @sql;
+    EXEC sp_executesql @sql;
 
-FETCH NEXT FROM db_cursor INTO @dbName;
-```
-
+    FETCH NEXT FROM db_cursor INTO @dbName;
 END
 
 CLOSE db_cursor;

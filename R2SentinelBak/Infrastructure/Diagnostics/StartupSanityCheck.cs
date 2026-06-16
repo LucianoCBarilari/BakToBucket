@@ -7,6 +7,7 @@ namespace R2SentinelBak.Infrastructure.Diagnostics;
 
 public class StartupSanityCheck(
     IOptions<AppOptions> appOptions,
+    IOptions<StorageOptions> storageOptions,
     IOptions<ConnectionStringsOptions> connOptions,
     R2ClientFactory r2ClientFactory,
     IEnumerable<IDatabasePing> databasePingers,
@@ -44,8 +45,11 @@ public class StartupSanityCheck(
         try
         {
             using var client = r2ClientFactory.CreateClient();
-            await client.ListBucketsAsync(ct); 
-            logger.LogInformation("Cloudflare R2 connectivity verified.");
+            await client.HeadBucketAsync(new Amazon.S3.Model.HeadBucketRequest 
+            { 
+                BucketName = storageOptions.Value.BucketName 
+            }, ct);
+            logger.LogInformation("Cloudflare R2 connectivity verified for bucket {Bucket}.", storageOptions.Value.BucketName);
         }
         catch (Exception ex)
         {
