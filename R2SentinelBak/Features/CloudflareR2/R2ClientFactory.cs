@@ -1,35 +1,34 @@
 using Amazon.Runtime;
 using Amazon.S3;
+using Microsoft.Extensions.Options;
 
 namespace R2SentinelBak.Features.CloudflareR2;
 
-public sealed class R2ClientFactory(IConfiguration configuration)
+public sealed class R2ClientFactory(IOptions<StorageOptions> storageOptions)
 {
     public IAmazonS3 CreateClient()
     {
-        var endpoint = configuration["Sentinel:R2Endpoint"];
-        var accessKey = configuration["Sentinel:R2AccessKey"];
-        var secretKey = configuration["Sentinel:R2SecretKey"];
+        var options = storageOptions.Value;
 
-        if (string.IsNullOrWhiteSpace(endpoint))
+        if (string.IsNullOrWhiteSpace(options.Endpoint))
         {
-            throw new InvalidOperationException("Sentinel:R2Endpoint is required.");
+            throw new InvalidOperationException("StorageOptions:Endpoint is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(accessKey))
+        if (string.IsNullOrWhiteSpace(options.AccessKey))
         {
-            throw new InvalidOperationException("Sentinel:R2AccessKey is required.");
+            throw new InvalidOperationException("StorageOptions:AccessKey is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(secretKey))
+        if (string.IsNullOrWhiteSpace(options.SecretKey))
         {
-            throw new InvalidOperationException("Sentinel:R2SecretKey is required.");
+            throw new InvalidOperationException("StorageOptions:SecretKey is required.");
         }
 
-        var credentials = new BasicAWSCredentials(accessKey, secretKey);
+        var credentials = new BasicAWSCredentials(options.AccessKey, options.SecretKey);
         var config = new AmazonS3Config
         {
-            ServiceURL = endpoint,
+            ServiceURL = options.Endpoint,
             ForcePathStyle = true,
             Timeout = TimeSpan.FromMinutes(10),
             RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED

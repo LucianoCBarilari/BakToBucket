@@ -1,92 +1,109 @@
-# R2SentinelBak v0.9.0
+# R2SentinelBak v0.10.1
 
-**R2SentinelBak** is a robust, multi-platform .NET 10 background service designed for automated SQL Server database backups and secure delivery to Cloudflare R2 (or any S3-compatible storage).
+R2SentinelBak is a robust, multi-platform .NET 10 background service designed for automated SQL Server database backups and secure delivery to Cloudflare R2 (or any S3-compatible storage).
 
-##  Features
+## Features
 
-- **Automated SQL Backups**: Configurable database selection via IncludedDatabases in ppsettings.json.
-- **Intelligent Compression**: Backups are zipped locally using a descriptive naming convention: Backup_DB_yyyyMMdd_HHmmss.zip.
-- **Cloudflare R2 Integration**: Custom Multipart Upload implementation for reliable handling of large files (>64MB), featuring R2-specific compatibility fixes (disabled payload signing and legacy checksums).
-- **Resilience & Stability**:
-  - Built-in retry policies using **Polly** for network and IO transients.
-  - Global exception handling to prevent service crashes.
-  - Automatic local cleanup of .bak and .zip files after successful uploads.
-- **Cross-Platform**: Runs natively on **Ubuntu Server** and **Windows** as a standalone executable.
+- Automated SQL Backups: Configurable database selection.
+- Backup Integrity: Verified using SQL Server RESTORE VERIFYONLY.
+- Cloud Storage: Secure delivery to Cloudflare R2 with automatic threshold checks.
+- Resilience: Built-in retry policies using Polly.
+- Cross-Platform: Runs on Windows and Linux (Ubuntu).
 
-##  Technical Stack
+## Configuration
 
-- **Framework**: .NET 10.0 (Worker Service)
-- **Database**: Microsoft SQL Server
-- **Cloud Storage**: Cloudflare R2 / AWS S3
-- **Libraries**:
-  - AWSSDK.S3: For storage interaction.
-  - Polly: For resilience and retry logic.
-  - Serilog: For structured logging to console and local files.
-  - DotNetEnv: Support for .env files in development.
+The service is configured via appsettings.json or environment variables (using double underscore __ for nesting).
 
-##  Configuration
+### Structure
 
-The service is driven by ppsettings.json or environment variables.
+| Section | Description |
+| :--- | :--- |
+| LogOptions | Logging configuration (folder, filename, minimum level). |
+| StorageOptions | Cloudflare R2 / S3 storage credentials and bucket details. |
+| ConnectionStrings | Database connection strings for SqlServer and PostgreSql. |
+| AppOptions | Core application settings (database type, backup folder, schedule). |
+| RetentionOptions | Maximum allowed total size for the bucket in GB. |
 
-### Example Configuration (ppsettings.json)
+### Example appsettings.json
 
-`json
+```json
 {
-  "LogConfig": {
+  "LogOptions": {
     "FolderPath": "Logs",
     "FileName": "log.txt",
     "MinimumLevel": "Information"
   },
-  "Sentinel": {
-    "R2AccessKey": "your_access_key",
-    "R2SecretKey": "your_secret_key",
-    "R2Endpoint": "https://<account_id>.r2.cloudflarestorage.com",
-    "R2BucketName": "backups",
-    "DbConnectionString": "Server=localhost;Database=master;User Id=sa;Password=your_password;TrustServerCertificate=True",
-    "IncludedDatabases": [ "MainDB", "UserDB" ],
-    "BackupIntervalHours": 24
+  "StorageOptions": {
+    "AccessKey": "your_access_key",
+    "SecretKey": "your_secret_key",
+    "Endpoint": "https://<account_id>.r2.cloudflarestorage.com",
+    "BucketName": "backups"
   },
-  "BackupSchedule": {
-    "RunAtHour": 2,
-    "RunAtMinute": 0
+  "ConnectionStrings": {
+    "SqlServer": "Server=localhost;Database=master;...",
+    "PostgreSql": "Host=localhost;Database=master;..."
   },
-  "BackupFolder": "C:\\Backups"
+  "AppOptions": {
+    "DatabaseType": "SqlServer",
+    "BackupHostName": "MyServer",
+    "BackupFolder": "./Backups",
+    "BackupIntervalHours": 24,
+    "Schedule": {
+      "RunAtHour": 2,
+      "RunAtMinute": 0
+    },
+    "IncludedDatabases": ["Db1", "Db2"]
+  },
+  "RetentionOptions": {
+    "MaxBucketSizeGB": 10
+  }
 }
-`
+```
 
-##  Deployment
+## Setup & Installation
 
-### Standalone Executables
-The project is configured to generate self-contained, single-file executables that do not require the .NET runtime installed on the host.
-
-**Build for Windows:**
-`ash
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.9.0
-`
-
-**Build for Linux (Ubuntu):**
-`ash
-dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=0.9.0
-`
-
-##  Author
-
-**Luciano Castillo**
-
----
-*Disclaimer: This tool is provided "as is" for database orchestration and backup delivery.*
-
-
-## 🔐 Database Security
-
-When running as a **Windows Service**, the application defaults to the `NT AUTHORITY\SYSTEM` account, which lacks backup permissions by default (Error 916). 
-
-For production environments, it is **strongly recommended** to use a dedicated SQL Server user instead of Integrated Security.
-
-### Setting up a Backup User
-1. Locate the script in `Scripts/CreateBackupUser.sql`.
+### 1. Database Setup
+The service requires a dedicated user with backup permissions.
+1. Locate the provided script: `Scripts/CreateBackupUser.sql`.
 2. Execute it on your SQL Server instance to create the `R2SentinelUser`.
-3. Update your connection string in `appsettings.json`:
+3. Note: The user requires the `dbcreator` and `diskadmin` server roles to perform backups and integrity verification (`RESTORE VERIFYONLY`).
+4. Ensure the user is mapped to each database being backed up and has the necessary permissions within those databases.
+5. Use this user's credentials in your connection string.
 
-```json
-"DbConnectionString": "Server=localhost;Database=master;User Id=R2SentinelUser;Password=YourSecurePassword123!;TrustServerCertificate=True"`n```
+### 2. Deployment
+Download the latest release from the repository and extract it to your server.
+
+### 3. Service Registration
+
+#### Windows Service
+Register the application as a Windows Service using PowerShell as Administrator:
+```powershell
+New-Service -Name "R2SentinelBak" -BinaryPathName "C:\Path\To\R2SentinelBak.exe" -DisplayName "R2 Sentinel Backup Service" -StartupType Automatic
+Start-Service -Name "R2SentinelBak"
+```
+
+#### Linux Service (Systemd)
+Create a service file at `/etc/systemd/system/r2sentinelbak.service`:
+```ini
+[Unit]
+Description=R2 Sentinel Backup Service
+
+[Service]
+ExecStart=/opt/r2sentinelbak/R2SentinelBak
+WorkingDirectory=/opt/r2sentinelbak
+Restart=always
+User=backup-user
+
+[Install]
+WantedBy=multi-user.target
+```
+Then start it:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable r2sentinelbak
+sudo systemctl start r2sentinelbak
+```
+
+## Author
+
+Luciano Castillo

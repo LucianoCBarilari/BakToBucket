@@ -46,13 +46,13 @@ public class Worker(
         }
     }
 
-    private static DateTime GetNextRunTime(DateTime now, int hour, int minute)
+    public static DateTime GetNextRunTime(DateTime now, int hour, int minute)
     {
         var next = now.Date.AddHours(hour).AddMinutes(minute);
         return now >= next ? next.AddDays(1) : next;
     }
 
-    private static int ValidateRange(int value, int min, int max, string key)
+    public static int ValidateRange(int value, int min, int max, string key)
     {
         if (value < min || value > max)
             throw new InvalidOperationException($"{key} must be between {min} and {max}.");

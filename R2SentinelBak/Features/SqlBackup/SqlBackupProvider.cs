@@ -3,10 +3,23 @@ using System.Text.RegularExpressions;
 
 namespace R2SentinelBak.Features.SqlBackup;
 
-public class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupServices
+public class SqlBackupProvider(ILogger<SqlBackupProvider> logger) : IBackupProvider
 {
+    public string DatabaseType => "SqlServer";
+
     private static readonly Regex DatabaseNameRegex = new(@"^[a-zA-Z0-9_\-]+$", RegexOptions.Compiled);
-    public async Task BackupDatabasesAsync(string connectionString, string backupFolder,List<string> dbList)
+
+    public async Task TestConnectionAsync(string connectionString, CancellationToken ct)
+    {
+        logger.LogDebug("Testing SQL Server connection.");
+        using var conn = new SqlConnection(connectionString);
+        await conn.OpenAsync(ct).ConfigureAwait(false);
+        
+        using var cmd = new SqlCommand("SELECT 1", conn);
+        await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
+    }
+
+    public async Task BackupDatabasesAsync(string connectionString, string backupFolder, List<string> dbList, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         ArgumentException.ThrowIfNullOrWhiteSpace(backupFolder);
@@ -17,7 +30,7 @@ public class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupSe
         try
         {
             using var conn = new SqlConnection(connectionString);
-            await conn.OpenAsync().ConfigureAwait(false);          
+            await conn.OpenAsync(ct).ConfigureAwait(false);
 
             foreach (var db in dbList)
             {
@@ -40,9 +53,17 @@ public class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupSe
                     CommandTimeout = 3600
                 };
 
-                await backupCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                await backupCmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
 
-                logger.LogInformation("Backed up database {DatabaseName} to {BackupFile}.", db, backupFile);
+                var verifySql = $"RESTORE VERIFYONLY FROM DISK = '{safeBackupFile}';";
+                using var verifyCmd = new SqlCommand(verifySql, conn)
+                {
+                    CommandTimeout = 3600
+                };
+                await verifyCmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+
+                logger.LogInformation("Backup integrity verified for {DatabaseName}.", db);
+                logger.LogInformation("Backed up database {DatabaseName} to {BackupFile}.", db, backupFile);    
             }
         }
         catch (SqlException ex)
@@ -62,23 +83,21 @@ public class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupSe
         }
     }
 
-    private static void ValidateDatabaseName(string dbName)
+    public static void ValidateDatabaseName(string dbName)
     {
         if (string.IsNullOrWhiteSpace(dbName))
-            throw new InvalidOperationException(
-                "Database name cannot be empty.");
+            throw new InvalidOperationException("Database name cannot be empty.");
 
         if (!DatabaseNameRegex.IsMatch(dbName))
-            throw new InvalidOperationException(
-                $"Invalid database name: {dbName}");
+            throw new InvalidOperationException($"Invalid database name: {dbName}");
     }
 
-    private static string EscapeSqlIdentifier(string value)
+    public static string EscapeSqlIdentifier(string value)
     {
         return value.Replace("]", "]]");
     }
 
-    private static string EscapeSqlLiteral(string value)
+    public static string EscapeSqlLiteral(string value)
     {
         return value.Replace("'", "''");
     }
@@ -112,12 +131,8 @@ public class SqlBackupServices(ILogger<SqlBackupServices> logger) : ISqlBackupSe
                 break;
 
             default:
-                logger.LogError(ex,
-                    "SQL Error {ErrorNumber}.",
-                    ex.Number);
+                logger.LogError(ex, "SQL Error {ErrorNumber}.", ex.Number);
                 break;
         }
     }
 }
-    
-

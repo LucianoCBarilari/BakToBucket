@@ -1,5 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Microsoft.Extensions.Options;
 using R2SentinelBak.Infrastructure.Resilience;
 
 namespace R2SentinelBak.Features.CloudflareR2;
@@ -7,7 +8,7 @@ namespace R2SentinelBak.Features.CloudflareR2;
 public sealed class Uploader(
     R2ClientFactory clientFactory,
     PolicyRegistry policyRegistry,
-    IConfiguration configuration,
+    IOptions<StorageOptions> storageOptions,
     ILogger<Uploader> logger)
 {
     private const long PartSize = 64 * 1024 * 1024; // 64 MB
@@ -20,9 +21,9 @@ public sealed class Uploader(
         if (!File.Exists(backupFilePath))
             throw new FileNotFoundException("Backup file not found.", backupFilePath);
 
-        var bucketName = configuration["Sentinel:R2BucketName"];
+        var bucketName = storageOptions.Value.BucketName;
         if (string.IsNullOrWhiteSpace(bucketName))
-            throw new InvalidOperationException("Sentinel:R2BucketName is required.");
+            throw new InvalidOperationException("StorageOptions:BucketName is required.");
 
         var objectKey = Path.GetFileName(backupFilePath);
         var fileSize = new FileInfo(backupFilePath).Length;
