@@ -2,7 +2,9 @@
 
 Automated SQL Server backup service for secure, resilient archiving to Cloudflare R2 and S3-compatible storage.
 
-**.NET 10.0+ | License: Apache 2.0 | Version: 0.10.1**
+![.NET](https://img.shields.io/badge/.NET-10.0%2B-blue)
+![License](https://img.shields.io/badge/License-Apache_2.0-green)
+![Version](https://img.shields.io/badge/Version-0.10.1-orange)
 
 ## Overview
 
