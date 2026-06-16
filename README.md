@@ -24,35 +24,52 @@
   - Serilog: For structured logging to console and local files.
   - DotNetEnv: Support for .env files in development.
 
-##  Configuration
+## Configuration
 
-The service is driven by ppsettings.json or environment variables.
+The service is configured via `appsettings.json` or environment variables (using double underscore `__` for nesting).
 
-### Example Configuration (ppsettings.json)
+### Structure
 
-`json
+| Section | Description |
+| :--- | :--- |
+| **LogOptions** | Logging configuration (folder, filename, minimum level). |
+| **StorageOptions** | Cloudflare R2 / S3 storage credentials and bucket details. |
+| **ConnectionStrings** | Database connection strings for SqlServer and PostgreSql. |
+| **AppOptions** | Core application settings (database type, backup folder, schedule). |
+
+### Example `appsettings.json`
+
+```json
 {
-  "LogConfig": {
+  "LogOptions": {
     "FolderPath": "Logs",
     "FileName": "log.txt",
     "MinimumLevel": "Information"
   },
-  "Sentinel": {
-    "R2AccessKey": "your_access_key",
-    "R2SecretKey": "your_secret_key",
-    "R2Endpoint": "https://<account_id>.r2.cloudflarestorage.com",
-    "R2BucketName": "backups",
-    "DbConnectionString": "Server=localhost;Database=master;User Id=sa;Password=your_password;TrustServerCertificate=True",
-    "IncludedDatabases": [ "MainDB", "UserDB" ],
-    "BackupIntervalHours": 24
+  "StorageOptions": {
+    "AccessKey": "your_access_key",
+    "SecretKey": "your_secret_key",
+    "Endpoint": "https://<account_id>.r2.cloudflarestorage.com",
+    "BucketName": "backups"
   },
-  "BackupSchedule": {
-    "RunAtHour": 2,
-    "RunAtMinute": 0
+  "ConnectionStrings": {
+    "SqlServer": "Server=localhost;Database=master;...",
+    "PostgreSql": "Host=localhost;Database=master;..."
   },
-  "BackupFolder": "C:\\Backups"
+  "AppOptions": {
+    "DatabaseType": "SqlServer",
+    "BackupHostName": "MyServer",
+    "BackupFolder": "./Backups",
+    "BackupIntervalHours": 24,
+    "Schedule": {
+      "RunAtHour": 2,
+      "RunAtMinute": 0
+    },
+    "IncludedDatabases": ["Db1", "Db2"]
+  }
 }
-`
+```
+
 
 ##  Deployment
 
