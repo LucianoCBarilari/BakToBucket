@@ -4,7 +4,7 @@ using Xunit;
 
 namespace R2SentinelBak.Tests.Unit.Features.SqlBackup;
 
-public class SqlBackupServicesShould
+public class SqlBackupProviderShould
 {
     [Theory]
     [InlineData("MainDB")]
@@ -14,7 +14,7 @@ public class SqlBackupServicesShould
     public void AllowValidDatabaseNames(string dbName)
     {
         // Act
-        var act = () => SqlBackupServices.ValidateDatabaseName(dbName);
+        var act = () => SqlBackupProvider.ValidateDatabaseName(dbName);
 
         // Assert
         act.Should().NotThrow();
@@ -27,7 +27,7 @@ public class SqlBackupServicesShould
     public void ThrowException_WhenDatabaseNameIsEmpty(string? dbName)
     {
         // Act
-        var act = () => SqlBackupServices.ValidateDatabaseName(dbName!);
+        var act = () => SqlBackupProvider.ValidateDatabaseName(dbName!);
 
         // Assert
         act.Should().Throw<InvalidOperationException>()
@@ -42,10 +42,11 @@ public class SqlBackupServicesShould
     public void ThrowException_WhenDatabaseNameIsInvalid(string dbName)
     {
         // Act
-        var act = () => SqlBackupServices.ValidateDatabaseName(dbName);
+        var act = () => SqlBackupProvider.ValidateDatabaseName(dbName);
 
         // Assert
         act.Should().Throw<InvalidOperationException>()
            .WithMessage($"Invalid database name: {dbName}");
     }
 }
+
