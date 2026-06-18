@@ -58,12 +58,15 @@ public class StartupSanityCheck(
         }
 
         var backupFolder = appOptions.Value.BackupFolder;
-        if (string.IsNullOrWhiteSpace(backupFolder))
+        var backupReadPath = appOptions.Value.BackupReadPath;
+        var readPath = !string.IsNullOrWhiteSpace(backupReadPath) ? backupReadPath : backupFolder;
+
+        if (string.IsNullOrWhiteSpace(readPath))
         {
-            backupFolder = Path.Combine(AppContext.BaseDirectory, "Backup");
+            readPath = Path.Combine(AppContext.BaseDirectory, "Backup");
         }
 
-        var folderPath = Path.GetFullPath(backupFolder);
+        var folderPath = Path.GetFullPath(readPath);
         try
         {
             if (!Directory.Exists(folderPath))

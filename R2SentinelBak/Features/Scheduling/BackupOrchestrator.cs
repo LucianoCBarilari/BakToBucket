@@ -27,7 +27,13 @@ public sealed class BackupOrchestrator(
             return;
         }
 
-        var backupFolder = EnsureBackupFolderExists(options.BackupFolder);
+        var writePath = options.BackupFolder;
+        var readPath = !string.IsNullOrWhiteSpace(options.BackupReadPath) 
+            ? Path.GetFullPath(options.BackupReadPath) 
+            : EnsureBackupFolderExists(options.BackupFolder);
+
+        Directory.CreateDirectory(readPath);
+        
         var connectionString = GetConnectionString(options);
         var provider = GetBackupProvider(options.DatabaseType);
 
@@ -36,11 +42,16 @@ public sealed class BackupOrchestrator(
         string zipPath = string.Empty;
         try
         {
-            await provider.BackupDatabasesAsync(connectionString, backupFolder, databases, cancellationToken);
+            await provider.BackupDatabasesAsync(connectionString, writePath, databases, cancellationToken);
             
             var hostName = !string.IsNullOrWhiteSpace(options.BackupHostName) ? options.BackupHostName : Environment.MachineName;
-            zipPath = await zipServices.CreateZipAsync(backupFolder, hostName, "", cancellationToken: cancellationToken);
+            zipPath = await zipServices.CreateZipAsync(readPath, hostName, "", cancellationToken: cancellationToken);
             
+            if (new FileInfo(zipPath).Length <= 22) 
+            {
+                throw new InvalidOperationException($"Backup generated is empty. Verify that 'BackupReadPath' ({readPath}) points to the correct directory.");
+            }
+
             if (await IsUploadPermitted(zipPath, cancellationToken))
             {
                 await uploader.UploadBackupAsync(zipPath, cancellationToken);
@@ -53,7 +64,7 @@ public sealed class BackupOrchestrator(
         }
         finally
         {
-            CleanupLocalFiles(zipPath, backupFolder);
+            CleanupLocalFiles(zipPath, readPath);
         }
     }
 
@@ -99,11 +110,11 @@ public sealed class BackupOrchestrator(
         return true;
     }
 
-    private void CleanupLocalFiles(string zipPath, string backupFolder)
+    private void CleanupLocalFiles(string zipPath, string readPath)
     {
         if (File.Exists(zipPath)) File.Delete(zipPath);
 
-        foreach (var bak in Directory.GetFiles(backupFolder, "*.bak"))
+        foreach (var bak in Directory.GetFiles(readPath, "*.bak"))
         {
             try { File.Delete(bak); }
             catch (Exception ex) { logger.LogWarning(ex, "Failed to delete local file: {File}", bak); }
