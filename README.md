@@ -4,7 +4,7 @@ Automated SQL Server backup service for secure, resilient archiving to Cloudflar
 
 ![.NET](https://img.shields.io/badge/.NET-10.0%2B-blue)
 ![License](https://img.shields.io/badge/License-Apache_2.0-green)
-![Version](https://img.shields.io/badge/Version-0.10.3-orange)
+![Version](https://img.shields.io/badge/Version-0.10.4-orange)
 
 ## Overview
 
@@ -33,8 +33,8 @@ Download the latest release from the [Releases page](../../releases) and extract
 ```bash
 # Linux example
 cd /opt/r2sentinelbak
-sudo wget https://github.com/<your-org>/R2SentinelBak/releases/download/v0.10.3/R2SentinelBak_v0.10.3_linux-x64.tar.gz
-sudo tar -xzf R2SentinelBak_v0.10.3_linux-x64.tar.gz
+sudo wget https://github.com/<your-org>/R2SentinelBak/releases/download/v0.10.4/R2SentinelBak_v0.10.4_linux-x64.tar.gz
+sudo tar -xzf R2SentinelBak_v0.10.4_linux-x64.tar.gz
 sudo chmod +x R2SentinelBak
 ```
 
@@ -104,7 +104,7 @@ sudo systemctl status r2sentinelbak
 
 ## SQL Server in Docker
 
-If your SQL Server instance runs in a Docker container, the `BackupFolder` in `appsettings.json` must match the **path as seen from inside the container**, not the host path.
+If your SQL Server instance runs in a Docker container, the `BackupFolder` must match the **path as seen from inside the container**, not the host path.
 
 ### Why
 
@@ -119,15 +119,19 @@ volumes:
   - /srv/sqlserver/backup:/var/opt/mssql/backup
 ```
 
-Then set `BackupFolder` to the **container-side** path:
+Then configure both paths in `appsettings.json`:
 
 ```json
 "AppOptions": {
-  "BackupFolder": "/var/opt/mssql/backup"
+  "BackupFolder": "/var/opt/mssql/backup",
+  "BackupReadPath": "/srv/sqlserver/backup"
 }
 ```
 
-R2SentinelBak reads the `.bak` file from `/srv/sqlserver/backup` on the host (same volume), compresses it, uploads to R2, and cleans up automatically.
+- `BackupFolder` — path **inside the container** where SQL Server writes the `.bak`
+- `BackupReadPath` — path on the **host machine** where the app reads, zips, and uploads the `.bak`
+
+If `BackupReadPath` is empty, the app falls back to `BackupFolder` — default behavior for non-Docker environments.
 
 ---
 
@@ -139,13 +143,9 @@ The service is configured via `appsettings.json` or environment variables (using
 | :--- | :--- |
 | **LogOptions** | Logging configuration (folder, filename, minimum level). |
 | **StorageOptions** | Cloudflare R2 / S3 storage credentials and bucket details. |
-| ConnectionStrings | Database connection strings for SqlServer and PostgreSql. |
-| AppOptions | Core application settings (database type, backup folder, **backup read path**, schedule). |
-| RetentionOptions | Maximum allowed total size for the bucket in GB. |
-
-### Note on Docker Configuration
-If SQL Server runs in Docker, configure `BackupFolder` with the path **inside the container** (e.g., `/var/opt/mssql/backup`) and `BackupReadPath` with the path on the **host machine** (e.g., `/srv/sqlserver/backup`) where the volume is mounted.
-
+| **ConnectionStrings** | Database connection strings for SqlServer and PostgreSql. |
+| **AppOptions** | Core application settings (database type, backup folder, backup read path, schedule). |
+| **RetentionOptions** | Maximum allowed total size for the bucket in GB. |
 
 ### Example `appsettings.json`
 
@@ -170,6 +170,7 @@ If SQL Server runs in Docker, configure `BackupFolder` with the path **inside th
     "DatabaseType": "SqlServer",
     "BackupHostName": "MyServer",
     "BackupFolder": "/var/opt/mssql/backup",
+    "BackupReadPath": "/srv/sqlserver/backup",
     "BackupIntervalHours": 24,
     "Schedule": {
       "RunAtHour": 2,
