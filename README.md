@@ -139,9 +139,13 @@ The service is configured via `appsettings.json` or environment variables (using
 | :--- | :--- |
 | **LogOptions** | Logging configuration (folder, filename, minimum level). |
 | **StorageOptions** | Cloudflare R2 / S3 storage credentials and bucket details. |
-| **ConnectionStrings** | Database connection strings for SqlServer and PostgreSql. |
-| **AppOptions** | Core application settings (database type, backup folder, schedule). |
-| **RetentionOptions** | Maximum allowed total size for the bucket in GB. |
+| ConnectionStrings | Database connection strings for SqlServer and PostgreSql. |
+| AppOptions | Core application settings (database type, backup folder, **backup read path**, schedule). |
+| RetentionOptions | Maximum allowed total size for the bucket in GB. |
+
+### Note on Docker Configuration
+If SQL Server runs in Docker, configure `BackupFolder` with the path **inside the container** (e.g., `/var/opt/mssql/backup`) and `BackupReadPath` with the path on the **host machine** (e.g., `/srv/sqlserver/backup`) where the volume is mounted.
+
 
 ### Example `appsettings.json`
 
