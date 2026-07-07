@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="BakToBucket.Tests/BakToBucket.Tests.csproj" />
+  <Project Path="BakToBucket/BakToBucket.csproj" />
+</Solution>
