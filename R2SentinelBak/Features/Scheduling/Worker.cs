@@ -1,13 +1,15 @@
+using Microsoft.Extensions.Options;
+
 namespace R2SentinelBak.Features.Scheduling;
 
 public class Worker(
     ILogger<Worker> logger,
     BackupOrchestrator orchestrator,
-    IConfiguration configuration,
+    IOptions<AppOptions> appOptions,
     BackupRunOptions runOptions) : BackgroundService
 {
-    private readonly int _runAtHour = ValidateRange(configuration.GetValue<int?>("BackupSchedule:RunAtHour") ?? 2, 0, 23, "BackupSchedule:RunAtHour");
-    private readonly int _runAtMinute = ValidateRange(configuration.GetValue<int?>("BackupSchedule:RunAtMinute") ?? 0, 0, 59, "BackupSchedule:RunAtMinute");
+    private readonly int _runAtHour = ValidateRange(appOptions.Value.Schedule.RunAtHour, 0, 23, "AppOptions:Schedule:RunAtHour");
+    private readonly int _runAtMinute = ValidateRange(appOptions.Value.Schedule.RunAtMinute, 0, 59, "AppOptions:Schedule:RunAtMinute");
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

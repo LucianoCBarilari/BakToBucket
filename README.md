@@ -1,30 +1,153 @@
-# R2SentinelBak v0.10.1
+# R2SentinelBak
+
+Automated SQL Server backup service for secure, resilient archiving to Cloudflare R2 and S3-compatible storage.
+
+![.NET](https://img.shields.io/badge/.NET-10.0%2B-blue)
+![License](https://img.shields.io/badge/License-Apache_2.0-green)
+![Version](https://img.shields.io/badge/Version-0.10.3-orange)
+
+## Overview
 
 R2SentinelBak is a robust, multi-platform .NET 10 background service designed for automated SQL Server database backups and secure delivery to Cloudflare R2 (or any S3-compatible storage).
 
 ## Features
 
-- Automated SQL Backups: Configurable database selection.
-- Backup Integrity: Verified using SQL Server RESTORE VERIFYONLY.
-- Cloud Storage: Secure delivery to Cloudflare R2 with automatic threshold checks.
-- Resilience: Built-in retry policies using Polly.
-- Cross-Platform: Runs on Windows and Linux (Ubuntu).
+- **Automated SQL Backups:** Configurable database selection.
+- **Backup Integrity:** Verified using SQL Server RESTORE VERIFYONLY.
+- **Cloud Storage:** Secure delivery to Cloudflare R2 with automatic threshold checks.
+- **Resilience:** Built-in retry policies using Polly.
+- **Cross-Platform:** Runs on Windows and Linux (Ubuntu).
+- **Run Once Mode:** Trigger an immediate backup on demand via CLI flag.
+
+## Documentation
+
+- **Configuration:** Settings via `appsettings.json` or environment variables.
+- **Setup:** Database user configuration and service registration.
+
+## Quick Start
+
+### Installation
+
+Download the latest release from the [Releases page](../../releases) and extract it to your server.
+
+```bash
+# Linux example
+cd /opt/r2sentinelbak
+sudo wget https://github.com/<your-org>/R2SentinelBak/releases/download/v0.10.3/R2SentinelBak_v0.10.3_linux-x64.tar.gz
+sudo tar -xzf R2SentinelBak_v0.10.3_linux-x64.tar.gz
+sudo chmod +x R2SentinelBak
+```
+
+### Database Setup
+
+The service requires a dedicated user with backup permissions:
+
+1. Locate the provided script: `Scripts/CreateBackupUser.sql`.
+2. Execute it on your SQL Server instance to create the `R2SentinelUser`.
+3. Ensure the user is mapped to each database being backed up and has `dbcreator` and `diskadmin` server roles.
+4. Use this user's credentials in your connection string.
+
+---
+
+## Run Once Mode
+
+Use the `--run-once` flag to trigger an immediate backup without waiting for the scheduled time. Useful for testing your configuration or performing on-demand backups.
+
+```bash
+./R2SentinelBak --run-once
+```
+
+The service will execute the full backup cycle — backup, compress, upload to R2 — and then exit.
+
+---
+
+## Deployment
+
+### Windows
+
+```powershell
+New-Service -Name "R2SentinelBak" -BinaryPathName "C:\Path\To\R2SentinelBak.exe" -DisplayName "R2 Sentinel Backup Service" -StartupType Automatic
+Start-Service -Name "R2SentinelBak"
+```
+
+### Linux (Systemd)
+
+Create a service file at `/etc/systemd/system/r2sentinelbak.service`:
+
+```ini
+[Unit]
+Description=R2 Sentinel Backup Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/r2sentinelbak
+ExecStart=/opt/r2sentinelbak/R2SentinelBak
+Restart=always
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then enable and start it:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable r2sentinelbak
+sudo systemctl start r2sentinelbak
+sudo systemctl status r2sentinelbak
+```
+
+---
+
+## SQL Server in Docker
+
+If your SQL Server instance runs in a Docker container, the `BackupFolder` in `appsettings.json` must match the **path as seen from inside the container**, not the host path.
+
+### Why
+
+The `BACKUP DATABASE` command is executed by SQL Server itself. It writes the `.bak` file using its own filesystem context — not the host's. If you pass a host path, SQL Server won't find it and will return `Access denied`.
+
+### Setup
+
+Ensure your container has a backup volume mounted in your `docker-compose.yml`:
+
+```yaml
+volumes:
+  - /srv/sqlserver/backup:/var/opt/mssql/backup
+```
+
+Then set `BackupFolder` to the **container-side** path:
+
+```json
+"AppOptions": {
+  "BackupFolder": "/var/opt/mssql/backup"
+}
+```
+
+R2SentinelBak reads the `.bak` file from `/srv/sqlserver/backup` on the host (same volume), compresses it, uploads to R2, and cleans up automatically.
+
+---
 
 ## Configuration
 
-The service is configured via appsettings.json or environment variables (using double underscore __ for nesting).
-
-### Structure
+The service is configured via `appsettings.json` or environment variables (using double underscore `__` for nesting).
 
 | Section | Description |
 | :--- | :--- |
-| LogOptions | Logging configuration (folder, filename, minimum level). |
-| StorageOptions | Cloudflare R2 / S3 storage credentials and bucket details. |
+| **LogOptions** | Logging configuration (folder, filename, minimum level). |
+| **StorageOptions** | Cloudflare R2 / S3 storage credentials and bucket details. |
 | ConnectionStrings | Database connection strings for SqlServer and PostgreSql. |
-| AppOptions | Core application settings (database type, backup folder, schedule). |
+| AppOptions | Core application settings (database type, backup folder, **backup read path**, schedule). |
 | RetentionOptions | Maximum allowed total size for the bucket in GB. |
 
-### Example appsettings.json
+### Note on Docker Configuration
+If SQL Server runs in Docker, configure `BackupFolder` with the path **inside the container** (e.g., `/var/opt/mssql/backup`) and `BackupReadPath` with the path on the **host machine** (e.g., `/srv/sqlserver/backup`) where the volume is mounted.
+
+
+### Example `appsettings.json`
 
 ```json
 {
@@ -46,7 +169,7 @@ The service is configured via appsettings.json or environment variables (using d
   "AppOptions": {
     "DatabaseType": "SqlServer",
     "BackupHostName": "MyServer",
-    "BackupFolder": "./Backups",
+    "BackupFolder": "/var/opt/mssql/backup",
     "BackupIntervalHours": 24,
     "Schedule": {
       "RunAtHour": 2,
@@ -60,50 +183,6 @@ The service is configured via appsettings.json or environment variables (using d
 }
 ```
 
-## Setup & Installation
+## License
 
-### 1. Database Setup
-The service requires a dedicated user with backup permissions.
-1. Locate the provided script: `Scripts/CreateBackupUser.sql`.
-2. Execute it on your SQL Server instance to create the `R2SentinelUser`.
-3. Note: The user requires the `dbcreator` and `diskadmin` server roles to perform backups and integrity verification (`RESTORE VERIFYONLY`).
-4. Ensure the user is mapped to each database being backed up and has the necessary permissions within those databases.
-5. Use this user's credentials in your connection string.
-
-### 2. Deployment
-Download the latest release from the repository and extract it to your server.
-
-### 3. Service Registration
-
-#### Windows Service
-Register the application as a Windows Service using PowerShell as Administrator:
-```powershell
-New-Service -Name "R2SentinelBak" -BinaryPathName "C:\Path\To\R2SentinelBak.exe" -DisplayName "R2 Sentinel Backup Service" -StartupType Automatic
-Start-Service -Name "R2SentinelBak"
-```
-
-#### Linux Service (Systemd)
-Create a service file at `/etc/systemd/system/r2sentinelbak.service`:
-```ini
-[Unit]
-Description=R2 Sentinel Backup Service
-
-[Service]
-ExecStart=/opt/r2sentinelbak/R2SentinelBak
-WorkingDirectory=/opt/r2sentinelbak
-Restart=always
-User=backup-user
-
-[Install]
-WantedBy=multi-user.target
-```
-Then start it:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable r2sentinelbak
-sudo systemctl start r2sentinelbak
-```
-
-## Author
-
-Luciano Castillo
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

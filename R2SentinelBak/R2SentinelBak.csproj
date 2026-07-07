@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <Version>0.10.1</Version>
+    <Version>0.10.4</Version>
     <Authors>Luciano Castillo</Authors>
     <Company>Luciano Castillo</Company>
     <Description>Automated SQL Server backup service with Cloudflare R2 integration.</Description>
