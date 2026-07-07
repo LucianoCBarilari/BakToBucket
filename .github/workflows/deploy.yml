@@ -30,22 +30,22 @@ jobs:
       run: dotnet test -c Release --verbosity normal
 
     - name: Publish for Windows
-      run: dotnet publish R2SentinelBak/R2SentinelBak.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=${{ steps.get_version.outputs.VERSION }} -o ./publish/windows
+      run: dotnet publish BakToBucket/BakToBucket.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=${{ steps.get_version.outputs.VERSION }} -o ./publish/windows
 
     - name: Publish for Linux
-      run: dotnet publish R2SentinelBak/R2SentinelBak.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=${{ steps.get_version.outputs.VERSION }} -o ./publish/linux
+      run: dotnet publish BakToBucket/BakToBucket.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=true /p:Version=${{ steps.get_version.outputs.VERSION }} -o ./publish/linux
 
     - name: Zip Windows Release
       run: |
         cd publish/windows
-        zip -r ../../R2SentinelBak_v${{ steps.get_version.outputs.VERSION }}_win-x64.zip .
+        zip -r ../../BakToBucket_v${{ steps.get_version.outputs.VERSION }}_win-x64.zip .
         cd ../..
 
     - name: Zip Linux Release
       run: |
         cd publish/linux
-        chmod +x R2SentinelBak
-        tar -czvf ../../R2SentinelBak_v${{ steps.get_version.outputs.VERSION }}_linux-x64.tar.gz .
+        chmod +x BakToBucket
+        tar -czvf ../../BakToBucket_v${{ steps.get_version.outputs.VERSION }}_linux-x64.tar.gz .
         cd ../..
 
     - name: Create Release
@@ -54,8 +54,8 @@ jobs:
         tag_name: ${{ github.ref_name }}
         name: Release ${{ github.ref_name }}
         files: |
-          R2SentinelBak_v${{ steps.get_version.outputs.VERSION }}_win-x64.zip
-          R2SentinelBak_v${{ steps.get_version.outputs.VERSION }}_linux-x64.tar.gz
+          BakToBucket_v${{ steps.get_version.outputs.VERSION }}_win-x64.zip
+          BakToBucket_v${{ steps.get_version.outputs.VERSION }}_linux-x64.tar.gz
         draft: false
         prerelease: false
       env:
