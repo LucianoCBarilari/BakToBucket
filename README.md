@@ -4,7 +4,7 @@ Automated SQL Server backup service for secure, resilient archiving to Cloudflar
 
 ![.NET](https://img.shields.io/badge/.NET-10.0%2B-blue)
 ![License](https://img.shields.io/badge/License-Apache_2.0-green)
-![Version](https://img.shields.io/badge/Version-0.11.0-orange)
+![Version](https://img.shields.io/badge/Version-0.12.0-orange)
 
 ## Overview
 
@@ -18,6 +18,7 @@ BakToBucket is a robust, multi-platform .NET 10 background service designed for 
 - **Resilience:** Built-in retry policies using Polly.
 - **Cross-Platform:** Runs on Windows and Linux (Ubuntu).
 - **Run Once Mode:** Trigger an immediate backup on demand via CLI flag.
+- **Local Only Mode:** Backup, verify integrity, and package archives locally without cloud storage upload.
 
 ## Documentation
 
@@ -33,8 +34,8 @@ Download the latest release from the [Releases page](../../releases) and extract
 ```bash
 # Linux example
 cd /opt/BakToBucket
-sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.11.0/BakToBucket_v0.11.0_linux-x64.tar.gz
-sudo tar -xzf BakToBucket_v0.11.0_linux-x64.tar.gz
+sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.12.0/BakToBucket_v0.12.0_linux-x64.tar.gz
+sudo tar -xzf BakToBucket_v0.12.0_linux-x64.tar.gz
 sudo chmod +x BakToBucket
 ```
 
@@ -57,7 +58,7 @@ Use the `--run-once` flag to trigger an immediate backup without waiting for the
 ./BakToBucket --run-once
 ```
 
-The service will execute the full backup cycle — backup, compress, upload to R2 — and then exit.
+The service will execute the full backup cycle — backup, compress, upload to R2 (or retain locally if `LocalOnly` is set) — and then exit.
 
 ---
 
@@ -111,7 +112,7 @@ The service is configured via `appsettings.json` or environment variables (using
 | **LogOptions** | Logging configuration (folder, filename, minimum level). |
 | **StorageOptions** | Cloudflare R2 / S3 storage credentials and bucket details. |
 | ConnectionStrings | Database connection strings for SqlServer and PostgreSql. |
-| AppOptions | Core application settings (database type, backup folder, **backup read path**, schedule). |
+| AppOptions | Core application settings (database type, engine backup path, **local backup path**, **local only mode**, **zip output path**, schedule). |
 | RetentionOptions | Maximum allowed total size for the bucket in GB. |
 
 
@@ -137,8 +138,10 @@ The service is configured via `appsettings.json` or environment variables (using
   "AppOptions": {
     "DatabaseType": "SqlServer",
     "BackupHostName": "MyServer",
-    "BackupFolder": "/var/opt/mssql/backup",
-    "BackupReadPath": "/srv/sqlserver/backup",
+    "EngineBackupPath": "/var/opt/mssql/backup",
+    "LocalBackupPath": "/srv/sqlserver/backup",
+    "ZipOutputPath": "Archives",
+    "LocalOnly": false,
     "BackupIntervalHours": 24,
     "Schedule": {
       "RunAtHour": 2,

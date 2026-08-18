@@ -16,7 +16,7 @@ public class AppOptionsValidatorShould
             .Build();
 
         var validator = new AppOptionsValidator(config);
-        var options = new AppOptions { DatabaseType = "SqlServer", BackupFolder = "/backup", BackupIntervalHours = 24 };
+        var options = new AppOptions { DatabaseType = "SqlServer", EngineBackupPath = "/backup", BackupIntervalHours = 24 };
         
         var result = validator.Validate(null, options);
         result.Failed.Should().BeTrue();
@@ -33,7 +33,7 @@ public class AppOptionsValidatorShould
             .Build();
 
         var validator = new AppOptionsValidator(config);
-        var options = new AppOptions { DatabaseType = "PostgreSql", BackupFolder = "/backup", BackupIntervalHours = 24 };
+        var options = new AppOptions { DatabaseType = "PostgreSql", EngineBackupPath = "/backup", BackupIntervalHours = 24 };
         
         var result = validator.Validate(null, options);
         result.Failed.Should().BeTrue();
@@ -45,7 +45,7 @@ public class AppOptionsValidatorShould
     {
         var config = new ConfigurationBuilder().Build();
         var validator = new AppOptionsValidator(config);
-        var options = new AppOptions { DatabaseType = "Oracle", BackupFolder = "/backup", BackupIntervalHours = 24 };
+        var options = new AppOptions { DatabaseType = "Oracle", EngineBackupPath = "/backup", BackupIntervalHours = 24 };
         
         var result = validator.Validate(null, options);
         result.Failed.Should().BeTrue();
@@ -62,7 +62,7 @@ public class AppOptionsValidatorShould
             .Build();
 
         var validator = new AppOptionsValidator(config);
-        var options = new AppOptions { DatabaseType = "SqlServer", BackupFolder = "/backup", BackupIntervalHours = 24, IncludedDatabases = [] };
+        var options = new AppOptions { DatabaseType = "SqlServer", EngineBackupPath = "/backup", BackupIntervalHours = 24, IncludedDatabases = [] };
         
         var result = validator.Validate(null, options);
         result.Failed.Should().BeTrue();
@@ -81,7 +81,7 @@ public class AppOptionsValidatorShould
         var validator = new AppOptionsValidator(config);
         var options = new AppOptions { 
             DatabaseType = "SqlServer", 
-            BackupFolder = "/backup", 
+            EngineBackupPath = "/backup", 
             BackupIntervalHours = 24,
             IncludedDatabases = ["Db1"] 
         };
@@ -102,7 +102,7 @@ public class AppOptionsValidatorShould
         var validator = new AppOptionsValidator(config);
         var options = new AppOptions { 
             DatabaseType = "PostgreSql", 
-            BackupFolder = "/backup", 
+            EngineBackupPath = "/backup", 
             BackupIntervalHours = 24,
             IncludedDatabases = ["Db1"] 
         };

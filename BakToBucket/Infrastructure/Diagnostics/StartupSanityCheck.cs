@@ -42,24 +42,31 @@ public class StartupSanityCheck(
             throw;
         }
 
-        try
+        if (!appOptions.Value.LocalOnly)
         {
-            using var client = r2ClientFactory.CreateClient();
-            await client.HeadBucketAsync(new Amazon.S3.Model.HeadBucketRequest 
-            { 
-                BucketName = storageOptions.Value.BucketName 
-            }, ct);
-            logger.LogInformation("Cloudflare R2 connectivity verified for bucket {Bucket}.", storageOptions.Value.BucketName);
+            try
+            {
+                using var client = r2ClientFactory.CreateClient();
+                await client.HeadBucketAsync(new Amazon.S3.Model.HeadBucketRequest 
+                { 
+                    BucketName = storageOptions.Value.BucketName 
+                }, ct);
+                logger.LogInformation("Cloudflare R2 connectivity verified for bucket {Bucket}.", storageOptions.Value.BucketName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to verify Cloudflare R2 connectivity.");
+                throw;
+            }
         }
-        catch (Exception ex)
+        else
         {
-            logger.LogError(ex, "Failed to verify Cloudflare R2 connectivity.");
-            throw;
+            logger.LogInformation("Local-only mode enabled: skipping Cloudflare R2 connectivity check.");
         }
 
-        var backupFolder = appOptions.Value.BackupFolder;
-        var backupReadPath = appOptions.Value.BackupReadPath;
-        var readPath = !string.IsNullOrWhiteSpace(backupReadPath) ? backupReadPath : backupFolder;
+        var engineBackupPath = appOptions.Value.EngineBackupPath;
+        var localBackupPath = appOptions.Value.LocalBackupPath;
+        var readPath = !string.IsNullOrWhiteSpace(localBackupPath) ? localBackupPath : engineBackupPath;
 
         if (string.IsNullOrWhiteSpace(readPath))
         {

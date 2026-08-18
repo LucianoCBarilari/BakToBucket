@@ -10,8 +10,8 @@ public class AppOptionsValidator(IConfiguration configuration) : IValidateOption
         if (string.IsNullOrWhiteSpace(options.DatabaseType))
             return ValidateOptionsResult.Fail("AppOptions:DatabaseType is required.");
 
-        if (string.IsNullOrWhiteSpace(options.BackupFolder))
-            return ValidateOptionsResult.Fail("AppOptions:BackupFolder is required.");
+        if (string.IsNullOrWhiteSpace(options.EngineBackupPath))
+            return ValidateOptionsResult.Fail("AppOptions:EngineBackupPath is required.");
 
         if (options.BackupIntervalHours < 1 || options.BackupIntervalHours > 744)
             return ValidateOptionsResult.Fail("AppOptions:BackupIntervalHours must be between 1 and 744.");
