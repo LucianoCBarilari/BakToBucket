@@ -48,5 +48,16 @@ public class SqlBackupProviderShould
         act.Should().Throw<InvalidOperationException>()
            .WithMessage($"Invalid database name: {dbName}");
     }
+
+    [Theory]
+    [InlineData("/var/opt/mssql/backup", "TestDb", "20260818_120000", "/var/opt/mssql/backup/TestDb_20260818_120000.bak")]
+    [InlineData("/var/opt/mssql/backup/", "TestDb", "20260818_120000", "/var/opt/mssql/backup/TestDb_20260818_120000.bak")]
+    [InlineData(@"C:\Backups", "TestDb", "20260818_120000", @"C:\Backups\TestDb_20260818_120000.bak")]
+    [InlineData(@"C:\Backups\", "TestDb", "20260818_120000", @"C:\Backups\TestDb_20260818_120000.bak")]
+    public void BuildBackupFilePath_ConstructsCorrectPath_ForLinuxAndWindows(string folder, string db, string timestamp, string expected)
+    {
+        var result = SqlBackupProvider.BuildBackupFilePath(folder, db, timestamp);
+        result.Should().Be(expected);
+    }
 }
 

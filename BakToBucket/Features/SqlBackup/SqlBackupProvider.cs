@@ -24,7 +24,6 @@ public class SqlBackupProvider(ILogger<SqlBackupProvider> logger) : IBackupProvi
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         ArgumentException.ThrowIfNullOrWhiteSpace(backupFolder);
 
-        backupFolder = Path.GetFullPath(backupFolder);
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
 
         try
@@ -36,9 +35,7 @@ public class SqlBackupProvider(ILogger<SqlBackupProvider> logger) : IBackupProvi
             {
                 ValidateDatabaseName(db);
 
-                var backupFile = Path.Combine(
-                    backupFolder,
-                    $"{db}_{timestamp}.bak");
+                var backupFile = BuildBackupFilePath(backupFolder, db, timestamp);
 
                 var safeDb = EscapeSqlIdentifier(db);
                 var safeBackupFile = EscapeSqlLiteral(backupFile);
@@ -81,6 +78,14 @@ public class SqlBackupProvider(ILogger<SqlBackupProvider> logger) : IBackupProvi
             logger.LogError(ex, "Unexpected error while running SQL backup.");
             throw;
         }
+    }
+
+    public static string BuildBackupFilePath(string backupFolder, string dbName, string timestamp)
+    {
+        var isLinuxPath = backupFolder.StartsWith('/') || (!backupFolder.Contains('\\') && backupFolder.Contains('/'));
+        var separator = isLinuxPath ? "/" : "\\";
+        var cleanFolder = backupFolder.TrimEnd('/', '\\');
+        return $"{cleanFolder}{separator}{dbName}_{timestamp}.bak";
     }
 
     public static void ValidateDatabaseName(string dbName)

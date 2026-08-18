@@ -4,7 +4,7 @@ Automated SQL Server backup service for secure, resilient archiving to Cloudflar
 
 ![.NET](https://img.shields.io/badge/.NET-10.0%2B-blue)
 ![License](https://img.shields.io/badge/License-Apache_2.0-green)
-![Version](https://img.shields.io/badge/Version-0.12.0-orange)
+![Version](https://img.shields.io/badge/Version-0.12.1-orange)
 
 ## Overview
 
@@ -34,8 +34,8 @@ Download the latest release from the [Releases page](../../releases) and extract
 ```bash
 # Linux example
 cd /opt/BakToBucket
-sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.12.0/BakToBucket_v0.12.0_linux-x64.tar.gz
-sudo tar -xzf BakToBucket_v0.12.0_linux-x64.tar.gz
+sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.12.1/BakToBucket_v0.12.1_linux-x64.tar.gz
+sudo tar -xzf BakToBucket_v0.12.1_linux-x64.tar.gz
 sudo chmod +x BakToBucket
 ```
 
