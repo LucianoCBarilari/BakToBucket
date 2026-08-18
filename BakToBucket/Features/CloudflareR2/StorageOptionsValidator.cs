@@ -1,11 +1,17 @@
+using BakToBucket.Features.Scheduling;
 using Microsoft.Extensions.Options;
 
 namespace BakToBucket.Features.CloudflareR2;
 
-public class StorageOptionsValidator : IValidateOptions<StorageOptions>
+public class StorageOptionsValidator(IOptions<AppOptions>? appOptions = null) : IValidateOptions<StorageOptions>
 {
     public ValidateOptionsResult Validate(string? name, StorageOptions options)
     {
+        if (appOptions?.Value?.LocalOnly == true)
+        {
+            return ValidateOptionsResult.Success;
+        }
+
         if (string.IsNullOrWhiteSpace(options.AccessKey))
             return ValidateOptionsResult.Fail("StorageOptions:AccessKey is required.");
 
