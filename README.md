@@ -118,6 +118,8 @@ The service is configured via `appsettings.json` or environment variables (using
 
 ### Example `appsettings.json`
 
+#### Standard Configuration
+
 ```json
 {
   "LogOptions": {
@@ -154,6 +156,35 @@ The service is configured via `appsettings.json` or environment variables (using
   }
 }
 ```
+
+#### SQL Server in Docker Desktop (Windows)
+
+When running SQL Server on Docker Desktop for Windows, using a direct bind mount (e.g., `C:\Backups:/var/opt/mssql/backup`) will cause the `BACKUP DATABASE` command to fail with **OS Error 31 (DiskChangeFileSize)** due to VirtioFS/NTFS limitations.
+
+To resolve this, use a **Docker Named Volume** and configure BakToBucket to read from the WSL2 UNC network path:
+
+**1. `docker-compose.yml`:**
+```yaml
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    volumes:
+      - sql_backups:/var/opt/mssql/backup
+
+volumes:
+  sql_backups:
+```
+
+**2. `appsettings.json`:**
+```json
+  "AppOptions": {
+    "DatabaseType": "SqlServer",
+    "EngineBackupPath": "/var/opt/mssql/backup",
+    "LocalBackupPath": "\\\\wsl.localhost\\docker-desktop\\mnt\\docker-desktop-disk\\data\\docker\\volumes\\sqlserver_sql_backups\\_data",
+    "ZipOutputPath": "C:\\Backups"
+  }
+```
+*(Note: Docker Compose usually prefixes the volume name with your project directory name, e.g., `sqlserver_sql_backups`).*
 
 ## License
 
