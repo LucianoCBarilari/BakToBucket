@@ -21,11 +21,14 @@ public class BackupOrchestratorLocalOnlyShould
     {
         _appOptions = new AppOptions
         {
-            DatabaseType = "SqlServer",
             LocalOnly = true,
-            IncludedDatabases = ["TestDb"],
-            EngineBackupPath = Path.Combine(Path.GetTempPath(), "TestEngineBackup"),
-            LocalBackupPath = Path.Combine(Path.GetTempPath(), "TestLocalBackup")
+            SqlServer = new EngineOptions
+            {
+                Enabled = true,
+                IncludedDatabases = ["TestDb"],
+                EngineBackupPath = Path.Combine(Path.GetTempPath(), "TestEngineBackup"),
+                LocalBackupPath = Path.Combine(Path.GetTempPath(), "TestLocalBackup")
+            }
         };
 
         var appOptionsWrapper = Options.Create(_appOptions);
@@ -58,7 +61,7 @@ public class BackupOrchestratorLocalOnlyShould
         var options = new AppOptions { ZipOutputPath = customPath, LocalOnly = true };
         var baseDir = Path.Combine(Path.GetTempPath(), "Base");
 
-        var result = _orchestrator.ResolveZipOutputDirectory(options, baseDir);
+        var result = _orchestrator.ResolveZipOutputDirectory(options.ZipOutputPath, options.LocalOnly, baseDir);
 
         result.Should().Be(Path.GetFullPath(customPath));
     }
@@ -69,7 +72,7 @@ public class BackupOrchestratorLocalOnlyShould
         var options = new AppOptions { ZipOutputPath = "MyZips", LocalOnly = true };
         var baseDir = Path.Combine(Path.GetTempPath(), "Base");
 
-        var result = _orchestrator.ResolveZipOutputDirectory(options, baseDir);
+        var result = _orchestrator.ResolveZipOutputDirectory(options.ZipOutputPath, options.LocalOnly, baseDir);
 
         result.Should().Be(Path.GetFullPath(Path.Combine(baseDir, "MyZips")));
     }
@@ -80,7 +83,7 @@ public class BackupOrchestratorLocalOnlyShould
         var options = new AppOptions { ZipOutputPath = "", LocalOnly = true };
         var baseDir = Path.Combine(Path.GetTempPath(), "Base");
 
-        var result = _orchestrator.ResolveZipOutputDirectory(options, baseDir);
+        var result = _orchestrator.ResolveZipOutputDirectory(options.ZipOutputPath, options.LocalOnly, baseDir);
 
         result.Should().Be(Path.GetFullPath(Path.Combine(baseDir, "Archives")));
     }
@@ -91,7 +94,7 @@ public class BackupOrchestratorLocalOnlyShould
         var options = new AppOptions { ZipOutputPath = "", LocalOnly = false };
         var baseDir = Path.Combine(Path.GetTempPath(), "Base");
 
-        var result = _orchestrator.ResolveZipOutputDirectory(options, baseDir);
+        var result = _orchestrator.ResolveZipOutputDirectory(options.ZipOutputPath, options.LocalOnly, baseDir);
 
         result.Should().Be(Path.GetTempPath());
     }
@@ -110,8 +113,8 @@ public class BackupOrchestratorLocalOnlyShould
             var dummyZip = Path.Combine(tempFolder, "backup_result.zip");
             await File.WriteAllTextAsync(dummyZip, "dummy zip content bigger than 22 bytes header size", TestContext.Current.CancellationToken);
 
-            _appOptions.LocalBackupPath = tempFolder;
-            _appOptions.EngineBackupPath = tempFolder;
+            _appOptions.SqlServer.LocalBackupPath = tempFolder;
+            _appOptions.SqlServer.EngineBackupPath = tempFolder;
             _appOptions.LocalOnly = true;
             _fakeZipServices.ReturnedZipPath = dummyZip;
 
@@ -146,7 +149,7 @@ public class BackupOrchestratorLocalOnlyShould
     {
         public string ReturnedZipPath { get; set; } = "test.zip";
 
-        public Task<string> CreateZipAsync(string sourcePath, string hostName, string? outputDirectory, CancellationToken cancellationToken = default)
+        public Task<string> CreateZipAsync(string sourcePath, string hostName, string databaseType, string? outputDirectory, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(ReturnedZipPath);
         }

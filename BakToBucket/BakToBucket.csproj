@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.12.1</Version>
+    <Version>0.13.0</Version>
     <Authors>Luciano Castillo</Authors>
     <Company>Luciano Castillo</Company>
     <Description>Automated SQL Server backup service with Cloudflare R2 integration.</Description>

@@ -60,6 +60,7 @@ try
     builder.Services.AddSingleton<PolicyRegistry>();
     builder.Services.AddSingleton<R2ClientFactory>();
     builder.Services.AddSingleton<IBackupProvider, SqlBackupProvider>();
+    builder.Services.AddSingleton<IBackupProvider, BakToBucket.Features.PostgreSqlBackup.PostgreSqlBackupProvider>();
     builder.Services.AddTransient<Uploader>();
     builder.Services.AddTransient<IZipServices, ZipServices>();
     builder.Services.AddTransient<BackupOrchestrator>();
