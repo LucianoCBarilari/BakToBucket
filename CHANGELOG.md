@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-08-19
+
+### Added
+- **Multi-Engine Architecture**: BakToBucket now supports executing backups for multiple database engines (SQL Server and PostgreSQL) simultaneously or independently.
+- **PostgreSQL Support**: Added `PostgreSqlBackupProvider` which executes `pg_dump` internally via `docker exec`.
+- **Smart Container Auto-Discovery**: If the PostgreSQL container name isn't specified, BakToBucket will automatically discover the running Postgres container using `docker ps`.
+- **Differentiated ZIP Naming**: Archive files now include the database engine name to easily distinguish them in storage (e.g., `Backup_SqlServer_...zip` vs `Backup_PostgreSql_...zip`).
+
+### Changed
+- **Configuration Structure**: Completely refactored `AppOptions` into nested configuration objects (`SqlServer` and `PostgreSql`), allowing granular control over `EngineBackupPath`, `LocalBackupPath`, and `IncludedDatabases` per engine.
+- **Docker Compose Examples**: Updated documentation with modern named-volume approaches for PostgreSQL backups on Portainer.
+
 ## [0.12.1] - 2026-08-18
 
 ### Fixed

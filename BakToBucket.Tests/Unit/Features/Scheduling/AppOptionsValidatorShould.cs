@@ -7,7 +7,7 @@ namespace BakToBucket.Tests.Unit.Features.Scheduling;
 public class AppOptionsValidatorShould
 {
     [Fact]
-    public void Fail_When_DatabaseType_Is_SqlServer_And_ConnectionString_Is_Missing()
+    public void Fail_When_SqlServer_Is_Enabled_But_ConnectionString_Is_Missing()
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { 
@@ -16,7 +16,10 @@ public class AppOptionsValidatorShould
             .Build();
 
         var validator = new AppOptionsValidator(config);
-        var options = new AppOptions { DatabaseType = "SqlServer", EngineBackupPath = "/backup", BackupIntervalHours = 24 };
+        var options = new AppOptions { 
+            BackupIntervalHours = 24,
+            SqlServer = new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } 
+        };
         
         var result = validator.Validate(null, options);
         result.Failed.Should().BeTrue();
@@ -24,7 +27,7 @@ public class AppOptionsValidatorShould
     }
 
     [Fact]
-    public void Fail_When_DatabaseType_Is_PostgreSql_And_ConnectionString_Is_Missing()
+    public void Fail_When_PostgreSql_Is_Enabled_But_ConnectionString_Is_Missing()
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { 
@@ -33,7 +36,10 @@ public class AppOptionsValidatorShould
             .Build();
 
         var validator = new AppOptionsValidator(config);
-        var options = new AppOptions { DatabaseType = "PostgreSql", EngineBackupPath = "/backup", BackupIntervalHours = 24 };
+        var options = new AppOptions { 
+            BackupIntervalHours = 24,
+            PostgreSql = new PostgreSqlOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } 
+        };
         
         var result = validator.Validate(null, options);
         result.Failed.Should().BeTrue();
@@ -41,19 +47,23 @@ public class AppOptionsValidatorShould
     }
 
     [Fact]
-    public void Fail_When_DatabaseType_Is_Unsupported()
+    public void Fail_When_No_Engine_Is_Enabled()
     {
         var config = new ConfigurationBuilder().Build();
         var validator = new AppOptionsValidator(config);
-        var options = new AppOptions { DatabaseType = "Oracle", EngineBackupPath = "/backup", BackupIntervalHours = 24 };
+        var options = new AppOptions { 
+            BackupIntervalHours = 24,
+            SqlServer = new EngineOptions { Enabled = false },
+            PostgreSql = new PostgreSqlOptions { Enabled = false }
+        };
         
         var result = validator.Validate(null, options);
         result.Failed.Should().BeTrue();
-        result.FailureMessage.Should().Contain("not supported");
+        result.FailureMessage.Should().Contain("At least one database engine");
     }
 
     [Fact]
-    public void Fail_When_No_Databases_Included()
+    public void Fail_When_No_Databases_Included_For_SqlServer()
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { 
@@ -62,7 +72,10 @@ public class AppOptionsValidatorShould
             .Build();
 
         var validator = new AppOptionsValidator(config);
-        var options = new AppOptions { DatabaseType = "SqlServer", EngineBackupPath = "/backup", BackupIntervalHours = 24, IncludedDatabases = [] };
+        var options = new AppOptions { 
+            BackupIntervalHours = 24, 
+            SqlServer = new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = [] } 
+        };
         
         var result = validator.Validate(null, options);
         result.Failed.Should().BeTrue();
@@ -80,10 +93,8 @@ public class AppOptionsValidatorShould
 
         var validator = new AppOptionsValidator(config);
         var options = new AppOptions { 
-            DatabaseType = "SqlServer", 
-            EngineBackupPath = "/backup", 
             BackupIntervalHours = 24,
-            IncludedDatabases = ["Db1"] 
+            SqlServer = new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } 
         };
         
         var result = validator.Validate(null, options);
@@ -101,10 +112,8 @@ public class AppOptionsValidatorShould
 
         var validator = new AppOptionsValidator(config);
         var options = new AppOptions { 
-            DatabaseType = "PostgreSql", 
-            EngineBackupPath = "/backup", 
             BackupIntervalHours = 24,
-            IncludedDatabases = ["Db1"] 
+            PostgreSql = new PostgreSqlOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } 
         };
         
         var result = validator.Validate(null, options);

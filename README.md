@@ -4,7 +4,7 @@ Automated SQL Server backup service for secure, resilient archiving to Cloudflar
 
 ![.NET](https://img.shields.io/badge/.NET-10.0%2B-blue)
 ![License](https://img.shields.io/badge/License-Apache_2.0-green)
-![Version](https://img.shields.io/badge/Version-0.12.1-orange)
+![Version](https://img.shields.io/badge/Version-0.13.0-orange)
 
 ## Overview
 
@@ -34,8 +34,8 @@ Download the latest release from the [Releases page](../../releases) and extract
 ```bash
 # Linux example
 cd /opt/BakToBucket
-sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.12.1/BakToBucket_v0.12.1_linux-x64.tar.gz
-sudo tar -xzf BakToBucket_v0.12.1_linux-x64.tar.gz
+sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.13.0/BakToBucket_v0.13.0_linux-x64.tar.gz
+sudo tar -xzf BakToBucket_v0.13.0_linux-x64.tar.gz
 sudo chmod +x BakToBucket
 ```
 
@@ -112,7 +112,7 @@ The service is configured via `appsettings.json` or environment variables (using
 | **LogOptions** | Logging configuration (folder, filename, minimum level). |
 | **StorageOptions** | Cloudflare R2 / S3 storage credentials and bucket details. |
 | ConnectionStrings | Database connection strings for SqlServer and PostgreSql. |
-| AppOptions | Core application settings (database type, engine backup path, **local backup path**, **local only mode**, **zip output path**, schedule). |
+| AppOptions | Core application settings (BackupHostName, LocalOnly, ZipOutputPath, Schedule, and engine-specific configs). |
 | RetentionOptions | Maximum allowed total size for the bucket in GB. |
 
 
@@ -138,10 +138,7 @@ The service is configured via `appsettings.json` or environment variables (using
     "PostgreSql": "Host=localhost;Database=master;..."
   },
   "AppOptions": {
-    "DatabaseType": "SqlServer",
     "BackupHostName": "MyServer",
-    "EngineBackupPath": "/var/opt/mssql/backup",
-    "LocalBackupPath": "/srv/sqlserver/backup",
     "ZipOutputPath": "Archives",
     "LocalOnly": false,
     "BackupIntervalHours": 24,
@@ -149,7 +146,19 @@ The service is configured via `appsettings.json` or environment variables (using
       "RunAtHour": 2,
       "RunAtMinute": 0
     },
-    "IncludedDatabases": ["Db1", "Db2"]
+    "SqlServer": {
+      "Enabled": true,
+      "EngineBackupPath": "/var/opt/mssql/backup",
+      "LocalBackupPath": "/srv/sqlserver/backup",
+      "IncludedDatabases": ["Db1", "Db2"]
+    },
+    "PostgreSql": {
+      "Enabled": false,
+      "DockerContainerName": "postgres-local",
+      "EngineBackupPath": "/var/lib/postgresql/backup",
+      "LocalBackupPath": "/srv/postgresql/backup",
+      "IncludedDatabases": []
+    }
   },
   "RetentionOptions": {
     "MaxBucketSizeGB": 10
@@ -178,9 +187,11 @@ volumes:
 **2. `appsettings.json`:**
 ```json
   "AppOptions": {
-    "DatabaseType": "SqlServer",
-    "EngineBackupPath": "/var/opt/mssql/backup",
-    "LocalBackupPath": "\\\\wsl.localhost\\docker-desktop\\mnt\\docker-desktop-disk\\data\\docker\\volumes\\sqlserver_sql_backups\\_data",
+    "SqlServer": {
+      "Enabled": true,
+      "EngineBackupPath": "/var/opt/mssql/backup",
+      "LocalBackupPath": "\\\\wsl.localhost\\docker-desktop\\mnt\\docker-desktop-disk\\data\\docker\\volumes\\sqlserver_sql_backups\\_data"
+    },
     "ZipOutputPath": "C:\\Backups"
   }
 ```

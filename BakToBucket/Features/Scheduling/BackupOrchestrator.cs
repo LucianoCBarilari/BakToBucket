@@ -19,43 +19,55 @@ public sealed class BackupOrchestrator(
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         var options = appOptions.Value;
-        var databases = options.IncludedDatabases;
 
-        if (databases.Count == 0)
+        if (options.SqlServer?.Enabled == true && options.SqlServer.IncludedDatabases.Count > 0)
         {
-            logger.LogWarning("No databases configured for backup.");
-            return;
+            await ProcessEngineBackupAsync("SqlServer", options.SqlServer, options, cancellationToken);
         }
 
-        var writePath = options.EngineBackupPath;
-        var readPath = !string.IsNullOrWhiteSpace(options.LocalBackupPath) 
-            ? Path.GetFullPath(options.LocalBackupPath) 
-            : EnsureBackupFolderExists(options.EngineBackupPath);
+        if (options.PostgreSql?.Enabled == true && options.PostgreSql.IncludedDatabases.Count > 0)
+        {
+            await ProcessEngineBackupAsync("PostgreSql", options.PostgreSql, options, cancellationToken);
+        }
+        
+        if (options.SqlServer?.Enabled != true && options.PostgreSql?.Enabled != true)
+        {
+            logger.LogWarning("No database engines are enabled for backup.");
+        }
+    }
+
+    private async Task ProcessEngineBackupAsync(string databaseType, EngineOptions engineConfig, AppOptions globalOptions, CancellationToken cancellationToken)
+    {
+        var databases = engineConfig.IncludedDatabases;
+        var writePath = engineConfig.EngineBackupPath;
+        var readPath = !string.IsNullOrWhiteSpace(engineConfig.LocalBackupPath) 
+            ? Path.GetFullPath(engineConfig.LocalBackupPath) 
+            : EnsureBackupFolderExists(engineConfig.EngineBackupPath);
 
         Directory.CreateDirectory(readPath);
         
-        var connectionString = GetConnectionString(options);
-        var provider = GetBackupProvider(options.DatabaseType);
+        var connectionString = GetConnectionString(databaseType);
+        var provider = GetBackupProvider(databaseType);
 
-        logger.LogInformation("Starting backup cycle for {Count} databases.", databases.Count);
+        logger.LogInformation("Starting backup cycle for {Count} {DatabaseType} databases.", databases.Count, databaseType);
 
         string zipPath = string.Empty;
         try
         {
             await provider.BackupDatabasesAsync(connectionString, writePath, databases, cancellationToken);
             
-            var hostName = !string.IsNullOrWhiteSpace(options.BackupHostName) ? options.BackupHostName : Environment.MachineName;
-            var zipOutputDir = ResolveZipOutputDirectory(options, readPath);
+            var hostName = !string.IsNullOrWhiteSpace(globalOptions.BackupHostName) ? globalOptions.BackupHostName : Environment.MachineName;
+            var zipOutputDir = ResolveZipOutputDirectory(globalOptions.ZipOutputPath, globalOptions.LocalOnly, readPath);
             Directory.CreateDirectory(zipOutputDir);
 
-            zipPath = await zipServices.CreateZipAsync(readPath, hostName, zipOutputDir, cancellationToken: cancellationToken);
+            zipPath = await zipServices.CreateZipAsync(readPath, hostName, databaseType, zipOutputDir, cancellationToken: cancellationToken);
             
             if (new FileInfo(zipPath).Length <= 22) 
             {
-                throw new InvalidOperationException($"Backup generated is empty. Verify that 'LocalBackupPath' ({readPath}) points to the correct directory.");
+                throw new InvalidOperationException($"Backup generated is empty for {databaseType}. Verify that 'LocalBackupPath' ({readPath}) points to the correct directory.");
             }
 
-            if (!options.LocalOnly)
+            if (!globalOptions.LocalOnly)
             {
                 if (await IsUploadPermitted(zipPath, cancellationToken))
                 {
@@ -69,25 +81,25 @@ public sealed class BackupOrchestrator(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Backup orchestration failed.");
+            logger.LogError(ex, "Backup orchestration failed for {DatabaseType}.", databaseType);
             throw;
         }
         finally
         {
-            CleanupLocalFiles(zipPath, readPath, options.LocalOnly);
+            CleanupLocalFiles(zipPath, readPath, globalOptions.LocalOnly);
         }
     }
 
-    internal string ResolveZipOutputDirectory(AppOptions options, string localReadPath)
+    internal string ResolveZipOutputDirectory(string? zipOutputPath, bool localOnly, string localReadPath)
     {
-        if (!string.IsNullOrWhiteSpace(options.ZipOutputPath))
+        if (!string.IsNullOrWhiteSpace(zipOutputPath))
         {
-            return Path.IsPathRooted(options.ZipOutputPath)
-                ? Path.GetFullPath(options.ZipOutputPath)
-                : Path.GetFullPath(Path.Combine(localReadPath, options.ZipOutputPath));
+            return Path.IsPathRooted(zipOutputPath)
+                ? Path.GetFullPath(zipOutputPath)
+                : Path.GetFullPath(Path.Combine(localReadPath, zipOutputPath));
         }
 
-        if (options.LocalOnly)
+        if (localOnly)
         {
             return Path.GetFullPath(Path.Combine(localReadPath, "Archives"));
         }
@@ -103,14 +115,14 @@ public sealed class BackupOrchestrator(
         return path;
     }
 
-    internal string GetConnectionString(AppOptions options)
+    internal string GetConnectionString(string databaseType)
     {
-        var connectionString = options.DatabaseType.Equals("SqlServer", StringComparison.OrdinalIgnoreCase)
+        var connectionString = databaseType.Equals("SqlServer", StringComparison.OrdinalIgnoreCase)
             ? connOptions.Value.SqlServer
             : connOptions.Value.PostgreSql;
 
         if (string.IsNullOrWhiteSpace(connectionString))
-            throw new InvalidOperationException($"Connection string for {options.DatabaseType} is missing.");
+            throw new InvalidOperationException($"Connection string for {databaseType} is missing.");
 
         return connectionString;
     }

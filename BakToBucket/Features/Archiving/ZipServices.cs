@@ -4,7 +4,7 @@ namespace BakToBucket.Features.Archiving;
 
 public class ZipServices : IZipServices
 {
-    public async Task<string> CreateZipAsync(string sourcePath,string hostName,string? outputDirectory,CancellationToken cancellationToken = default)
+    public async Task<string> CreateZipAsync(string sourcePath, string hostName, string databaseType, string? outputDirectory, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
 
@@ -20,7 +20,7 @@ public class ZipServices : IZipServices
 
             var zipFilePath = Path.Combine(
                 targetDirectory,
-                $"Backup_{hostName}_{DateTime.Now:yyyyMMdd_HHmmss}.zip");
+                $"Backup_{databaseType}_{hostName}_{DateTime.Now:yyyyMMdd_HHmmss}.zip");
 
             if (File.Exists(sourcePath))
             {
