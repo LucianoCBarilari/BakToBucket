@@ -20,7 +20,7 @@ public class PostgreSqlBackupProvider(IOptions<AppOptions> options, ILogger<Post
     public async Task BackupDatabasesAsync(string connectionString, string backupFolder, List<string> dbList, CancellationToken ct)
     {
         var containerName = await GetPostgresContainerNameAsync(ct);
-        logger.LogInformation("Contenedor PostgreSQL detectado: {ContainerName}", containerName);
+        logger.LogInformation("Detected PostgreSQL container: {ContainerName}", containerName);
 
         // Simple connection string parsing for username
         var username = "postgres"; // default fallback
@@ -57,7 +57,7 @@ public class PostgreSqlBackupProvider(IOptions<AppOptions> options, ILogger<Post
                     if (mkdirProcess.ExitCode != 0)
                     {
                         var err = await mkdirProcess.StandardError.ReadToEndAsync(ct);
-                        logger.LogWarning("No se pudo asegurar la creación de la carpeta '{Folder}' en el contenedor. Error: {Error}", cleanFolder, err);
+                        logger.LogWarning("Could not ensure folder '{Folder}' creation inside container. Error: {Error}", cleanFolder, err);
                     }
                 }
             }
@@ -74,20 +74,20 @@ public class PostgreSqlBackupProvider(IOptions<AppOptions> options, ILogger<Post
                 CreateNoWindow = true
             };
             
-            logger.LogInformation("Ejecutando backup en Docker para la base de datos {Db}...", db);
+            logger.LogInformation("Executing backup in Docker for database {Db}...", db);
             
             using var process = Process.Start(processInfo);
-            if (process == null) throw new InvalidOperationException("No se pudo iniciar el proceso de Docker.");
+            if (process == null) throw new InvalidOperationException("Failed to start Docker process.");
 
             await process.WaitForExitAsync(ct);
             
             if (process.ExitCode != 0)
             {
                 var error = await process.StandardError.ReadToEndAsync(ct);
-                throw new Exception($"pg_dump falló en Docker (Exit Code {process.ExitCode}): {error}");
+                throw new Exception($"pg_dump failed in Docker (Exit Code {process.ExitCode}): {error}");
             }
             
-            logger.LogInformation("Backup completado para {Db} en {BackupFile}", db, backupFile);
+            logger.LogInformation("Backup completed for {Db} at {BackupFile}", db, backupFile);
         }
     }
 
@@ -110,7 +110,7 @@ public class PostgreSqlBackupProvider(IOptions<AppOptions> options, ILogger<Post
         };
 
         using var process = Process.Start(processInfo);
-        if (process == null) throw new InvalidOperationException("No se pudo ejecutar docker ps para auto-descubrimiento.");
+        if (process == null) throw new InvalidOperationException("Failed to execute docker ps for auto-discovery.");
         
         var output = await process.StandardOutput.ReadToEndAsync(ct);
         await process.WaitForExitAsync(ct);
@@ -118,10 +118,10 @@ public class PostgreSqlBackupProvider(IOptions<AppOptions> options, ILogger<Post
         var containers = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
         if (containers.Length == 0)
-            throw new InvalidOperationException("No se encontró ningún contenedor de PostgreSQL en ejecución y no se especificó DockerContainerName en la configuración.");
+            throw new InvalidOperationException("No running PostgreSQL container found and DockerContainerName was not specified in configuration.");
         
         if (containers.Length > 1)
-            throw new InvalidOperationException("Hay múltiples contenedores de PostgreSQL en ejecución. Por favor especifica 'DockerContainerName' en la configuración de PostgreSql.");
+            throw new InvalidOperationException("Multiple PostgreSQL containers are running. Please specify 'DockerContainerName' in the PostgreSql configuration.");
 
         return containers[0];
     }

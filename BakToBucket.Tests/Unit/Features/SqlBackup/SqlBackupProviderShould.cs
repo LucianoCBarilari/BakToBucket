@@ -38,7 +38,7 @@ public class SqlBackupProviderShould
     [InlineData("DB; DROP TABLE Users")]
     [InlineData("DB'--")]
     [InlineData("DB [Master]")]
-    [InlineData("Base Datos")] // Spaces not allowed by current regex
+    [InlineData("Database Name")] // Spaces not allowed by current regex
     public void ThrowException_WhenDatabaseNameIsInvalid(string dbName)
     {
         // Act
