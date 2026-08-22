@@ -1,3 +1,4 @@
+using BakToBucket.Features.Abstractions;
 using BakToBucket.Features.Scheduling;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
@@ -11,19 +12,21 @@ public class AppOptionsValidatorShould
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { 
-                {"ConnectionStrings:SqlServer", ""} 
+                {"ConnectionStrings:sqlserver", ""} 
             }!)
             .Build();
 
         var validator = new AppOptionsValidator(config);
         var options = new AppOptions { 
             BackupIntervalHours = 24,
-            SqlServer = new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } 
+            Engines = {
+                { DatabaseEngine.sqlserver, new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } }
+            }
         };
         
         var result = validator.Validate(null, options);
         result.Failed.Should().BeTrue();
-        result.FailureMessage.Should().Contain("ConnectionStrings:SqlServer");
+        result.FailureMessage.Should().Contain("ConnectionStrings:sqlserver");
     }
 
     [Fact]
@@ -31,19 +34,21 @@ public class AppOptionsValidatorShould
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { 
-                {"ConnectionStrings:PostgreSql", ""} 
+                {"ConnectionStrings:postgresql", ""} 
             }!)
             .Build();
 
         var validator = new AppOptionsValidator(config);
         var options = new AppOptions { 
             BackupIntervalHours = 24,
-            PostgreSql = new PostgreSqlOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } 
+            Engines = {
+                { DatabaseEngine.postgresql, new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } }
+            }
         };
         
         var result = validator.Validate(null, options);
         result.Failed.Should().BeTrue();
-        result.FailureMessage.Should().Contain("ConnectionStrings:PostgreSql");
+        result.FailureMessage.Should().Contain("ConnectionStrings:postgresql");
     }
 
     [Fact]
@@ -53,8 +58,10 @@ public class AppOptionsValidatorShould
         var validator = new AppOptionsValidator(config);
         var options = new AppOptions { 
             BackupIntervalHours = 24,
-            SqlServer = new EngineOptions { Enabled = false },
-            PostgreSql = new PostgreSqlOptions { Enabled = false }
+            Engines = {
+                { DatabaseEngine.sqlserver, new EngineOptions { Enabled = false } },
+                { DatabaseEngine.postgresql, new EngineOptions { Enabled = false } }
+            }
         };
         
         var result = validator.Validate(null, options);
@@ -67,14 +74,16 @@ public class AppOptionsValidatorShould
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { 
-                {"ConnectionStrings:SqlServer", "Server=test"} 
+                {"ConnectionStrings:sqlserver", "Server=test"} 
             }!)
             .Build();
 
         var validator = new AppOptionsValidator(config);
         var options = new AppOptions { 
             BackupIntervalHours = 24, 
-            SqlServer = new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = [] } 
+            Engines = {
+                { DatabaseEngine.sqlserver, new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = [] } }
+            }
         };
         
         var result = validator.Validate(null, options);
@@ -87,36 +96,42 @@ public class AppOptionsValidatorShould
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { 
-                {"ConnectionStrings:SqlServer", "Server=test"} 
+                {"ConnectionStrings:sqlserver", "Server=test"} 
             }!)
             .Build();
 
         var validator = new AppOptionsValidator(config);
         var options = new AppOptions { 
             BackupIntervalHours = 24,
-            SqlServer = new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } 
+            Engines = {
+                { DatabaseEngine.sqlserver, new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } }
+            }
         };
         
         var result = validator.Validate(null, options);
-        result.Succeeded.Should().BeTrue();
+        result.Failed.Should().BeFalse();
     }
 
     [Fact]
-    public void Success_When_Configuration_Is_Valid_For_PostgreSql()
+    public void Success_When_Configuration_Is_Valid_For_Both()
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { 
-                {"ConnectionStrings:PostgreSql", "Server=test"} 
+                {"ConnectionStrings:sqlserver", "Server=test1"},
+                {"ConnectionStrings:postgresql", "Server=test2"} 
             }!)
             .Build();
 
         var validator = new AppOptionsValidator(config);
         var options = new AppOptions { 
             BackupIntervalHours = 24,
-            PostgreSql = new PostgreSqlOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } 
+            Engines = {
+                { DatabaseEngine.sqlserver, new EngineOptions { Enabled = true, EngineBackupPath = "/backup", IncludedDatabases = ["Db1"] } },
+                { DatabaseEngine.postgresql, new EngineOptions { Enabled = true, EngineBackupPath = "/backup2", IncludedDatabases = ["Db2"] } }
+            }
         };
         
         var result = validator.Validate(null, options);
-        result.Succeeded.Should().BeTrue();
+        result.Failed.Should().BeFalse();
     }
 }
