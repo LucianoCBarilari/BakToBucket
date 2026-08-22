@@ -1,7 +1,8 @@
+using BakToBucket.Features.Abstractions;
 using BakToBucket.Features.Archiving;
 using BakToBucket.Features.CloudflareR2;
 using BakToBucket.Features.Scheduling;
-using BakToBucket.Features.SqlBackup;
+using BakToBucket.Features.SqlServerBackup;
 using BakToBucket.Infrastructure.Diagnostics;
 using BakToBucket.Infrastructure.Resilience;
 using FluentAssertions;
@@ -22,21 +23,25 @@ public class BackupOrchestratorLocalOnlyShould
         _appOptions = new AppOptions
         {
             LocalOnly = true,
-            SqlServer = new EngineOptions
-            {
-                Enabled = true,
-                IncludedDatabases = ["TestDb"],
-                EngineBackupPath = Path.Combine(Path.GetTempPath(), "TestEngineBackup"),
-                LocalBackupPath = Path.Combine(Path.GetTempPath(), "TestLocalBackup")
+            Engines = {
+                {
+                    DatabaseEngine.sqlserver, new EngineOptions
+                    {
+                        Enabled = true,
+                        IncludedDatabases = ["TestDb"],
+                        EngineBackupPath = Path.Combine(Path.GetTempPath(), "TestEngineBackup"),
+                        LocalBackupPath = Path.Combine(Path.GetTempPath(), "TestLocalBackup")
+                    }
+                }
             }
         };
 
         var appOptionsWrapper = Options.Create(_appOptions);
-        var connOptions = Options.Create(new ConnectionStringsOptions { SqlServer = "Server=localhost;Database=master;" });
+        var connOptions = Options.Create(new ConnectionStringsOptions { { DatabaseEngine.sqlserver, "Server=localhost;Database=master;" } });
         var retentionOptions = Options.Create(new RetentionOptions { MaxBucketSizeGB = 10 });
         var storageOptions = Options.Create(new StorageOptions());
 
-        _fakeBackupProvider = new FakeBackupProvider("SqlServer");
+        _fakeBackupProvider = new FakeBackupProvider(DatabaseEngine.sqlserver);
         _fakeZipServices = new FakeZipServices();
         var r2ClientFactory = new R2ClientFactory(storageOptions);
         var policyRegistry = new PolicyRegistry(new LoggerFactory().CreateLogger<PolicyRegistry>());
@@ -113,8 +118,8 @@ public class BackupOrchestratorLocalOnlyShould
             var dummyZip = Path.Combine(tempFolder, "backup_result.zip");
             await File.WriteAllTextAsync(dummyZip, "dummy zip content bigger than 22 bytes header size", TestContext.Current.CancellationToken);
 
-            _appOptions.SqlServer.LocalBackupPath = tempFolder;
-            _appOptions.SqlServer.EngineBackupPath = tempFolder;
+            _appOptions.Engines[DatabaseEngine.sqlserver].LocalBackupPath = tempFolder;
+            _appOptions.Engines[DatabaseEngine.sqlserver].EngineBackupPath = tempFolder;
             _appOptions.LocalOnly = true;
             _fakeZipServices.ReturnedZipPath = dummyZip;
 
@@ -133,9 +138,9 @@ public class BackupOrchestratorLocalOnlyShould
         }
     }
 
-    private class FakeBackupProvider(string dbType) : IBackupProvider
+    private class FakeBackupProvider(DatabaseEngine dbType) : IBackupProvider
     {
-        public string DatabaseType => dbType;
+        public DatabaseEngine DatabaseType => dbType;
         public bool BackupDatabasesCalled { get; private set; }
         public Task TestConnectionAsync(string connectionString, CancellationToken ct) => Task.CompletedTask;
         public Task BackupDatabasesAsync(string connectionString, string backupFolder, List<string> dbList, CancellationToken ct)

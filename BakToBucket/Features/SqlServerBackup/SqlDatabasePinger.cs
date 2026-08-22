@@ -1,10 +1,11 @@
+using BakToBucket.Features.Abstractions;
 using Microsoft.Data.SqlClient;
 
-namespace BakToBucket.Features.SqlBackup;
+namespace BakToBucket.Features.SqlServerBackup;
 
 public class SqlDatabasePinger : IDatabasePing
 {
-    public string DatabaseType => "SqlServer";
+    public DatabaseEngine DatabaseType => DatabaseEngine.sqlserver;
 
     public async Task TestConnectionAsync(string connectionString, CancellationToken ct)
     {

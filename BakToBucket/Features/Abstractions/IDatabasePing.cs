@@ -1,7 +1,7 @@
-namespace BakToBucket.Features.SqlBackup;
+namespace BakToBucket.Features.Abstractions;
 
 public interface IDatabasePing
 {
-    string DatabaseType { get; } 
+    DatabaseEngine DatabaseType { get; }
     Task TestConnectionAsync(string connectionString, CancellationToken ct);
 }

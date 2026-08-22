@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
-using BakToBucket.Features.SqlBackup;
 using BakToBucket.Features.Scheduling;
 using BakToBucket.Features.CloudflareR2;
+using BakToBucket.Features.Abstractions;
 
 namespace BakToBucket.Infrastructure.Diagnostics;
 
@@ -16,18 +16,18 @@ public class StartupSanityCheck(
     public async Task RunAllChecksAsync(CancellationToken ct)
     {
         logger.LogInformation("Starting pre-flight sanity checks.");
-
         var options = appOptions.Value;
-
-        if (options.SqlServer?.Enabled == true)
+        
+        var activeEngines = options.Engines
+            .Where(e => e.Value.Enabled)
+            .ToList();
+        
+        foreach (var engine in activeEngines)
         {
-            await CheckDatabaseAsync("SqlServer", connOptions.Value.SqlServer, options.SqlServer, ct);
-        }
-
-        if (options.PostgreSql?.Enabled == true)
-        {
-            // Note: Postgres uses Npgsql connection string which we might not be pinging yet, but we will pass it.
-            await CheckDatabaseAsync("PostgreSql", connOptions.Value.PostgreSql, options.PostgreSql, ct);
+            if (connOptions.Value.TryGetValue(engine.Key, out var connString))
+            {
+                await CheckDatabaseAsync(engine.Key, connString, engine.Value, ct);
+            }
         }
 
         if (!options.LocalOnly)
@@ -35,9 +35,9 @@ public class StartupSanityCheck(
             try
             {
                 using var client = r2ClientFactory.CreateClient();
-                await client.HeadBucketAsync(new Amazon.S3.Model.HeadBucketRequest 
-                { 
-                    BucketName = storageOptions.Value.BucketName 
+                await client.HeadBucketAsync(new Amazon.S3.Model.HeadBucketRequest
+                {
+                    BucketName = storageOptions.Value.BucketName
                 }, ct);
                 logger.LogInformation("Cloudflare R2 connectivity verified for bucket {Bucket}.", storageOptions.Value.BucketName);
             }
@@ -53,18 +53,15 @@ public class StartupSanityCheck(
         }
     }
 
-    private async Task CheckDatabaseAsync(string databaseType, string connectionString, EngineOptions engineConfig, CancellationToken ct)
+    private async Task CheckDatabaseAsync(DatabaseEngine databaseType, string connectionString, EngineOptions engineConfig, CancellationToken ct)
     {
-        var pinger = databasePingers.FirstOrDefault(p => 
-            p.DatabaseType.Equals(databaseType, StringComparison.OrdinalIgnoreCase));
-
-        // If a pinger exists for this type, test connection
+        var pinger = databasePingers.FirstOrDefault(p => p.DatabaseType == databaseType);
+                
         if (pinger != null)
         {
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
+            if (string.IsNullOrWhiteSpace(connectionString))            
                 throw new InvalidOperationException($"Connection string for {databaseType} is missing or empty.");
-            }
+            
 
             try
             {

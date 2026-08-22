@@ -1,14 +1,9 @@
-using Amazon.S3;
 using Amazon.S3.Model;
+using BakToBucket.Features.Abstractions;
 using BakToBucket.Features.CloudflareR2;
 using Microsoft.Extensions.Options;
 
 namespace BakToBucket.Infrastructure.Diagnostics;
-
-public interface IBucketSizeChecker
-{
-    Task<long> GetTotalBucketSizeAsync(CancellationToken ct);
-}
 
 public class R2BucketSizeChecker(
     R2ClientFactory clientFactory,

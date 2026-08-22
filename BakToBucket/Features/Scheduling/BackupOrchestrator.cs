@@ -1,6 +1,6 @@
+using BakToBucket.Features.Abstractions;
 using BakToBucket.Features.Archiving;
 using BakToBucket.Features.CloudflareR2;
-using BakToBucket.Features.SqlBackup;
 using BakToBucket.Infrastructure.Diagnostics;
 using Microsoft.Extensions.Options;
 
@@ -20,23 +20,22 @@ public sealed class BackupOrchestrator(
     {
         var options = appOptions.Value;
 
-        if (options.SqlServer?.Enabled == true && options.SqlServer.IncludedDatabases.Count > 0)
-        {
-            await ProcessEngineBackupAsync("SqlServer", options.SqlServer, options, cancellationToken);
-        }
+        var activeEngines = options.Engines
+           .Where(e => e.Value.Enabled && e.Value.IncludedDatabases.Count > 0)
+           .ToList();
 
-        if (options.PostgreSql?.Enabled == true && options.PostgreSql.IncludedDatabases.Count > 0)
-        {
-            await ProcessEngineBackupAsync("PostgreSql", options.PostgreSql, options, cancellationToken);
-        }
-        
-        if (options.SqlServer?.Enabled != true && options.PostgreSql?.Enabled != true)
+        if (activeEngines.Count == 0)
         {
             logger.LogWarning("No database engines are enabled for backup.");
+            return;
+        }
+        foreach (var engine in activeEngines)
+        {
+            await ProcessEngineBackupAsync(engine.Key, engine.Value, options, cancellationToken);
         }
     }
 
-    private async Task ProcessEngineBackupAsync(string databaseType, EngineOptions engineConfig, AppOptions globalOptions, CancellationToken cancellationToken)
+    private async Task ProcessEngineBackupAsync(DatabaseEngine databaseType, EngineOptions engineConfig, AppOptions globalOptions, CancellationToken cancellationToken)
     {
         var databases = engineConfig.IncludedDatabases;
         var writePath = engineConfig.EngineBackupPath;
@@ -60,7 +59,7 @@ public sealed class BackupOrchestrator(
             var zipOutputDir = ResolveZipOutputDirectory(globalOptions.ZipOutputPath, globalOptions.LocalOnly, readPath);
             Directory.CreateDirectory(zipOutputDir);
 
-            zipPath = await zipServices.CreateZipAsync(readPath, hostName, databaseType, zipOutputDir, cancellationToken: cancellationToken);
+            zipPath = await zipServices.CreateZipAsync(readPath, hostName, databaseType.ToString(), zipOutputDir, cancellationToken: cancellationToken);
             
             if (new FileInfo(zipPath).Length <= 22) 
             {
@@ -114,23 +113,17 @@ public sealed class BackupOrchestrator(
         Directory.CreateDirectory(path);
         return path;
     }
-
-    internal string GetConnectionString(string databaseType)
+    internal string GetConnectionString(DatabaseEngine databaseType)
     {
-        var connectionString = databaseType.Equals("SqlServer", StringComparison.OrdinalIgnoreCase)
-            ? connOptions.Value.SqlServer
-            : connOptions.Value.PostgreSql;
-
-        if (string.IsNullOrWhiteSpace(connectionString))
-            throw new InvalidOperationException($"Connection string for {databaseType} is missing.");
-
-        return connectionString;
+        if (connOptions.Value.TryGetValue(databaseType, out var connString) && !string.IsNullOrWhiteSpace(connString))
+            return connString;
+        throw new InvalidOperationException($"Connection string for {databaseType} is missing.");
     }
 
-    internal IBackupProvider GetBackupProvider(string databaseType)
-    {
-        return backupProviders.FirstOrDefault(p => p.DatabaseType.Equals(databaseType, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException($"No backup provider found for: {databaseType}");
+    internal IBackupProvider GetBackupProvider(DatabaseEngine databaseType)
+    {        
+        return backupProviders.FirstOrDefault(p => p.DatabaseType == databaseType) ?? 
+               throw new InvalidOperationException($"No backup provider found for: {databaseType}");
     }
 
     internal async Task<bool> IsUploadPermitted(string zipPath, CancellationToken cancellationToken)

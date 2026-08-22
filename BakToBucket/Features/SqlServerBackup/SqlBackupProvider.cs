@@ -1,11 +1,12 @@
+using BakToBucket.Features.Abstractions;
 using Microsoft.Data.SqlClient;
 using System.Text.RegularExpressions;
 
-namespace BakToBucket.Features.SqlBackup;
+namespace BakToBucket.Features.SqlServerBackup;
 
 public class SqlBackupProvider(ILogger<SqlBackupProvider> logger) : IBackupProvider
 {
-    public string DatabaseType => "SqlServer";
+    public DatabaseEngine DatabaseType => DatabaseEngine.sqlserver;
 
     private static readonly Regex DatabaseNameRegex = new(@"^[a-zA-Z0-9_\-]+$", RegexOptions.Compiled);
 

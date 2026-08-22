@@ -1,3 +1,5 @@
+using BakToBucket.Features.Abstractions;
+
 namespace BakToBucket.Features.Scheduling;
 
 public class AppOptions
@@ -7,9 +9,7 @@ public class AppOptions
     public bool LocalOnly { get; set; }
     public int BackupIntervalHours { get; set; } 
     public ScheduleOptions Schedule { get; set; } = new();
-    
-    public EngineOptions SqlServer { get; set; } = new();
-    public PostgreSqlOptions PostgreSql { get; set; } = new();
+    public Dictionary<DatabaseEngine, EngineOptions> Engines { get; set; } = [];
 }
 
 public class EngineOptions
@@ -18,9 +18,5 @@ public class EngineOptions
     public string EngineBackupPath { get; set; } = string.Empty;
     public string? LocalBackupPath { get; set; }
     public List<string> IncludedDatabases { get; set; } = [];
-}
-
-public class PostgreSqlOptions : EngineOptions
-{
     public string? DockerContainerName { get; set; }
 }
