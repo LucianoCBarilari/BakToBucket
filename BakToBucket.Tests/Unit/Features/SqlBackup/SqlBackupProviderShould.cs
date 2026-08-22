@@ -38,7 +38,7 @@ public class SqlBackupProviderShould
     [InlineData("DB; DROP TABLE Users")]
     [InlineData("DB'--")]
     [InlineData("DB [Master]")]
-    [InlineData("Base Datos")] // Spaces not allowed by current regex
+    [InlineData("Database Name")] // Spaces not allowed by current regex
     public void ThrowException_WhenDatabaseNameIsInvalid(string dbName)
     {
         // Act
@@ -47,6 +47,17 @@ public class SqlBackupProviderShould
         // Assert
         act.Should().Throw<InvalidOperationException>()
            .WithMessage($"Invalid database name: {dbName}");
+    }
+
+    [Theory]
+    [InlineData("/var/opt/mssql/backup", "TestDb", "20260818_120000", "/var/opt/mssql/backup/TestDb_20260818_120000.bak")]
+    [InlineData("/var/opt/mssql/backup/", "TestDb", "20260818_120000", "/var/opt/mssql/backup/TestDb_20260818_120000.bak")]
+    [InlineData(@"C:\Backups", "TestDb", "20260818_120000", @"C:\Backups\TestDb_20260818_120000.bak")]
+    [InlineData(@"C:\Backups\", "TestDb", "20260818_120000", @"C:\Backups\TestDb_20260818_120000.bak")]
+    public void BuildBackupFilePath_ConstructsCorrectPath_ForLinuxAndWindows(string folder, string db, string timestamp, string expected)
+    {
+        var result = SqlBackupProvider.BuildBackupFilePath(folder, db, timestamp);
+        result.Should().Be(expected);
     }
 }
 

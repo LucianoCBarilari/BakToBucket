@@ -17,7 +17,7 @@ public class BackupOrchestratorShould
 
     public BackupOrchestratorShould()
     {
-        var appOptions = Options.Create(new AppOptions { DatabaseType = "SqlServer" });
+        var appOptions = Options.Create(new AppOptions());
         var connOptions = Options.Create(new ConnectionStringsOptions { SqlServer = "Server=test" });
         var retentionOptions = Options.Create(new RetentionOptions { MaxBucketSizeGB = 10 });
         var storageOptions = Options.Create(new StorageOptions { BucketName = "test-bucket", AccessKey = "k", SecretKey = "s", Endpoint = "e" });
@@ -44,8 +44,7 @@ public class BackupOrchestratorShould
     [Fact]
     public void GetConnectionString_ReturnsCorrectString_ForSqlServer()
     {
-        var options = new AppOptions { DatabaseType = "SqlServer" };
-        var result = _orchestrator.GetConnectionString(options);
+        var result = _orchestrator.GetConnectionString("SqlServer");
         result.Should().Be("Server=test");
     }
 
@@ -65,7 +64,7 @@ public class BackupOrchestratorShould
 
     private class FakeZipServices : IZipServices
     {
-        public Task<string> CreateZipAsync(string sourcePath, string hostName, string? outputDirectory, CancellationToken cancellationToken = default) 
+        public Task<string> CreateZipAsync(string sourcePath, string hostName, string databaseType, string? outputDirectory, CancellationToken cancellationToken = default) 
             => Task.FromResult("test.zip");
     }
 

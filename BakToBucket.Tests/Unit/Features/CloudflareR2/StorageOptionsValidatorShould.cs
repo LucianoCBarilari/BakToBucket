@@ -38,4 +38,15 @@ public class StorageOptionsValidatorShould
         var result = _validator.Validate(null, options);
         result.Succeeded.Should().BeTrue();
     }
+
+    [Fact]
+    public void Success_When_Fields_Are_Empty_If_LocalOnly_Is_True()
+    {
+        var appOptions = Microsoft.Extensions.Options.Options.Create(new BakToBucket.Features.Scheduling.AppOptions { LocalOnly = true });
+        var validator = new StorageOptionsValidator(appOptions);
+        var options = new StorageOptions();
+
+        var result = validator.Validate(null, options);
+        result.Succeeded.Should().BeTrue();
+    }
 }

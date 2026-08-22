@@ -17,49 +17,68 @@ public class StartupSanityCheck(
     {
         logger.LogInformation("Starting pre-flight sanity checks.");
 
-        var databaseType = appOptions.Value.DatabaseType;
+        var options = appOptions.Value;
+
+        if (options.SqlServer?.Enabled == true)
+        {
+            await CheckDatabaseAsync("SqlServer", connOptions.Value.SqlServer, options.SqlServer, ct);
+        }
+
+        if (options.PostgreSql?.Enabled == true)
+        {
+            // Note: Postgres uses Npgsql connection string which we might not be pinging yet, but we will pass it.
+            await CheckDatabaseAsync("PostgreSql", connOptions.Value.PostgreSql, options.PostgreSql, ct);
+        }
+
+        if (!options.LocalOnly)
+        {
+            try
+            {
+                using var client = r2ClientFactory.CreateClient();
+                await client.HeadBucketAsync(new Amazon.S3.Model.HeadBucketRequest 
+                { 
+                    BucketName = storageOptions.Value.BucketName 
+                }, ct);
+                logger.LogInformation("Cloudflare R2 connectivity verified for bucket {Bucket}.", storageOptions.Value.BucketName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to verify Cloudflare R2 connectivity.");
+                throw;
+            }
+        }
+        else
+        {
+            logger.LogInformation("Local-only mode enabled: skipping Cloudflare R2 connectivity check.");
+        }
+    }
+
+    private async Task CheckDatabaseAsync(string databaseType, string connectionString, EngineOptions engineConfig, CancellationToken ct)
+    {
         var pinger = databasePingers.FirstOrDefault(p => 
-            p.DatabaseType.Equals(databaseType, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException($"No database pinger found for database type: {databaseType}");
+            p.DatabaseType.Equals(databaseType, StringComparison.OrdinalIgnoreCase));
 
-        var connectionString = databaseType.Equals("SqlServer", StringComparison.OrdinalIgnoreCase)
-            ? connOptions.Value.SqlServer
-            : connOptions.Value.PostgreSql;
-
-        if (string.IsNullOrWhiteSpace(connectionString))
+        // If a pinger exists for this type, test connection
+        if (pinger != null)
         {
-            throw new InvalidOperationException($"Connection string for {databaseType} is missing or empty.");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidOperationException($"Connection string for {databaseType} is missing or empty.");
+            }
+
+            try
+            {
+                await pinger.TestConnectionAsync(connectionString, ct);
+                logger.LogInformation("Database connectivity verified for {DatabaseType}.", databaseType);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to verify database connectivity for {DatabaseType}.", databaseType);
+                throw;
+            }
         }
 
-        try
-        {
-            await pinger.TestConnectionAsync(connectionString, ct);
-            logger.LogInformation("Database connectivity verified for {DatabaseType}.", databaseType);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to verify database connectivity for {DatabaseType}.", databaseType);
-            throw;
-        }
-
-        try
-        {
-            using var client = r2ClientFactory.CreateClient();
-            await client.HeadBucketAsync(new Amazon.S3.Model.HeadBucketRequest 
-            { 
-                BucketName = storageOptions.Value.BucketName 
-            }, ct);
-            logger.LogInformation("Cloudflare R2 connectivity verified for bucket {Bucket}.", storageOptions.Value.BucketName);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to verify Cloudflare R2 connectivity.");
-            throw;
-        }
-
-        var backupFolder = appOptions.Value.BackupFolder;
-        var backupReadPath = appOptions.Value.BackupReadPath;
-        var readPath = !string.IsNullOrWhiteSpace(backupReadPath) ? backupReadPath : backupFolder;
+        var readPath = !string.IsNullOrWhiteSpace(engineConfig.LocalBackupPath) ? engineConfig.LocalBackupPath : engineConfig.EngineBackupPath;
 
         if (string.IsNullOrWhiteSpace(readPath))
         {
@@ -74,14 +93,14 @@ public class StartupSanityCheck(
                 Directory.CreateDirectory(folderPath);
             }
             
-            var testFilePath = Path.Combine(folderPath, ".write_test");
+            var testFilePath = Path.Combine(folderPath, $".write_test_{databaseType}");
             await File.WriteAllTextAsync(testFilePath, "write_test", ct);
             File.Delete(testFilePath);
-            logger.LogInformation("Local backup directory is writable: {Path}", folderPath);
+            logger.LogInformation("Local backup directory is writable for {DatabaseType}: {Path}", databaseType, folderPath);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to verify local directory write permissions at {Path}.", folderPath);
+            logger.LogError(ex, "Failed to verify local directory write permissions for {DatabaseType} at {Path}.", databaseType, folderPath);
             throw;
         }
     }
