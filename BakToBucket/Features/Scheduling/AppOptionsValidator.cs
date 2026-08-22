@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+using BakToBucket.Features.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace BakToBucket.Features.Scheduling;
@@ -17,34 +17,32 @@ public class AppOptionsValidator(IConfiguration configuration) : IValidateOption
             return ValidateOptionsResult.Fail("AppOptions:Schedule:RunAtMinute must be between 0 and 59.");
 
         var connStrings = configuration.GetSection("ConnectionStrings");
+        bool hasEnabledEngine = false;
 
-        if (options.SqlServer?.Enabled == true)
-        {
-            if (string.IsNullOrWhiteSpace(options.SqlServer.EngineBackupPath))
-                return ValidateOptionsResult.Fail("AppOptions:SqlServer:EngineBackupPath is required when SqlServer is enabled.");
-                
-            if (string.IsNullOrWhiteSpace(connStrings["SqlServer"]))
-                return ValidateOptionsResult.Fail("ConnectionStrings:SqlServer is required when SqlServer is enabled.");
-                
-            if (options.SqlServer.IncludedDatabases == null || options.SqlServer.IncludedDatabases.Count == 0)
-                return ValidateOptionsResult.Fail("AppOptions:SqlServer:IncludedDatabases must contain at least one database.");
+        
+        foreach (DatabaseEngine engine in Enum.GetValues<DatabaseEngine>())
+        {            
+            if (options.Engines.TryGetValue(engine, out var engineConfig))
+            {
+                if (engineConfig.Enabled)
+                {
+                    hasEnabledEngine = true;
+
+                    if (string.IsNullOrWhiteSpace(engineConfig.EngineBackupPath))
+                        return ValidateOptionsResult.Fail($"AppOptions:Engines:{engine}:EngineBackupPath is required when {engine} is enabled.");
+                    
+                    if (string.IsNullOrWhiteSpace(connStrings[engine.ToString()]))
+                        return ValidateOptionsResult.Fail($"ConnectionStrings:{engine} is required when {engine} is enabled.");
+
+                    if (engineConfig.IncludedDatabases == null || engineConfig.IncludedDatabases.Count == 0)
+                        return ValidateOptionsResult.Fail($"AppOptions:Engines:{engine}:IncludedDatabases must contain at least one database.");
+                }
+            }
         }
 
-        if (options.PostgreSql?.Enabled == true)
+        if (!hasEnabledEngine)
         {
-            if (string.IsNullOrWhiteSpace(options.PostgreSql.EngineBackupPath))
-                return ValidateOptionsResult.Fail("AppOptions:PostgreSql:EngineBackupPath is required when PostgreSql is enabled.");
-                
-            if (string.IsNullOrWhiteSpace(connStrings["PostgreSql"]))
-                return ValidateOptionsResult.Fail("ConnectionStrings:PostgreSql is required when PostgreSql is enabled.");
-                
-            if (options.PostgreSql.IncludedDatabases == null || options.PostgreSql.IncludedDatabases.Count == 0)
-                return ValidateOptionsResult.Fail("AppOptions:PostgreSql:IncludedDatabases must contain at least one database.");
-        }
-
-        if (options.SqlServer?.Enabled != true && options.PostgreSql?.Enabled != true)
-        {
-            return ValidateOptionsResult.Fail("At least one database engine (SqlServer or PostgreSql) must be enabled in AppOptions.");
+            return ValidateOptionsResult.Fail("At least one database engine must be enabled in AppOptions:Engines.");
         }
 
         return ValidateOptionsResult.Success;

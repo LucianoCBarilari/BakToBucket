@@ -1,15 +1,14 @@
 using System.Diagnostics;
+using BakToBucket.Features.Abstractions;
 using BakToBucket.Features.Scheduling;
-using BakToBucket.Features.SqlBackup;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace BakToBucket.Features.PostgreSqlBackup;
 
 public class PostgreSqlBackupProvider(IOptions<AppOptions> options, ILogger<PostgreSqlBackupProvider> logger) : IBackupProvider
 {
-    private readonly AppOptions _options = options.Value;
-    public string DatabaseType => "PostgreSql";
+    private readonly AppOptions options = options.Value;
+    public DatabaseEngine DatabaseType => DatabaseEngine.postgresql;
 
     public async Task TestConnectionAsync(string connectionString, CancellationToken ct)
     {
@@ -92,12 +91,11 @@ public class PostgreSqlBackupProvider(IOptions<AppOptions> options, ILogger<Post
     }
 
     private async Task<string> GetPostgresContainerNameAsync(CancellationToken ct)
-    {
-        // Auto-discovery of the postgres container
-        // If the user specified it in appsettings, use it.
-        if (!string.IsNullOrWhiteSpace(_options.PostgreSql?.DockerContainerName))
+    {        
+        if (options.Engines.TryGetValue(DatabaseEngine.postgresql, out var pgConfig) &&
+           !string.IsNullOrWhiteSpace(pgConfig.DockerContainerName))
         {
-            return _options.PostgreSql.DockerContainerName;
+            return pgConfig.DockerContainerName;
         }
 
         var processInfo = new ProcessStartInfo
