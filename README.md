@@ -34,8 +34,8 @@ Download the latest release from the [Releases page](../../releases) and extract
 ```bash
 # Linux example
 cd /opt/BakToBucket
-sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.13.0/BakToBucket_v0.13.0_linux-x64.tar.gz
-sudo tar -xzf BakToBucket_v0.13.0_linux-x64.tar.gz
+sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.14.0/BakToBucket_v0.14.0_linux-x64.tar.gz
+sudo tar -xzf BakToBucket_v0.14.0_linux-x64.tar.gz
 sudo chmod +x BakToBucket
 ```
 
@@ -134,8 +134,8 @@ The service is configured via `appsettings.json` or environment variables (using
     "BucketName": "backups"
   },
   "ConnectionStrings": {
-    "SqlServer": "Server=localhost;Database=master;...",
-    "PostgreSql": "Host=localhost;Database=master;..."
+    "sqlserver": "Server=localhost;Database=master;...",
+    "postgresql": "Host=localhost;Database=master;..."
   },
   "AppOptions": {
     "BackupHostName": "MyServer",
@@ -146,18 +146,20 @@ The service is configured via `appsettings.json` or environment variables (using
       "RunAtHour": 2,
       "RunAtMinute": 0
     },
-    "SqlServer": {
-      "Enabled": true,
-      "EngineBackupPath": "/var/opt/mssql/backup",
-      "LocalBackupPath": "/srv/sqlserver/backup",
-      "IncludedDatabases": ["Db1", "Db2"]
-    },
-    "PostgreSql": {
-      "Enabled": false,
-      "DockerContainerName": "postgres-local",
-      "EngineBackupPath": "/var/lib/postgresql/backup",
-      "LocalBackupPath": "/srv/postgresql/backup",
-      "IncludedDatabases": []
+    "Engines": {
+      "sqlserver": {
+        "Enabled": true,
+        "EngineBackupPath": "/var/opt/mssql/backup",
+        "LocalBackupPath": "/srv/sqlserver/backup",
+        "IncludedDatabases": ["Db1", "Db2"]
+      },
+      "postgresql": {
+        "Enabled": false,
+        "DockerContainerName": "postgres-local",
+        "EngineBackupPath": "/var/lib/postgresql/backup",
+        "LocalBackupPath": "/srv/postgresql/backup",
+        "IncludedDatabases": []
+      }
     }
   },
   "RetentionOptions": {

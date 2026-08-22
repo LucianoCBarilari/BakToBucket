@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-08-22
+
+### Changed
+- **Architectural Refactoring (OCP)**: Refactored `AppOptions` and `ConnectionStringsOptions` to use a dynamic `Dictionary<DatabaseEngine, ...>`. The application now iterates over configured engines dynamically, adhering to the Open/Closed Principle.
+- **Dependency Inversion**: Moved `IBackupProvider` and `IDatabasePing` to `Features/Abstractions` to decouple infrastructure boundaries.
+- **Configuration Keys**: Engine configurations in `appsettings.json` are now defined under the `Engines` dictionary using `sqlserver` and `postgresql` as keys.
+
 ## [0.13.0] - 2026-08-19
 
 ### Added
