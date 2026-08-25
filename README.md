@@ -1,86 +1,42 @@
 # BakToBucket
 
-Automated SQL Server backup service for secure, resilient archiving to Cloudflare R2 and S3-compatible storage.
+Automated, multi-engine database backup service designed for secure, resilient archiving of SQL Server and PostgreSQL to Cloudflare R2 and S3-compatible storage.
 
 ![.NET](https://img.shields.io/badge/.NET-10.0%2B-blue)
 ![License](https://img.shields.io/badge/License-Apache_2.0-green)
-![Version](https://img.shields.io/badge/Version-0.13.0-orange)
+![Version](https://img.shields.io/badge/Version-0.15.2-orange)
 
 ## Overview
 
-BakToBucket is a robust, multi-platform .NET 10 background service designed for automated SQL Server database backups and secure delivery to Cloudflare R2 (or any S3-compatible storage).
+BakToBucket is a robust, production-ready .NET 10 background service designed for zero-headache automated database backups. It safely extracts data from your database engines, validates integrity, compresses the payload, and securely delivers it to Cloudflare R2 or any S3-compatible cloud storage.
 
 ## Features
 
-- **Automated SQL Backups:** Configurable database selection.
-- **Backup Integrity:** Verified using SQL Server RESTORE VERIFYONLY.
-- **Cloud Storage:** Secure delivery to Cloudflare R2 with automatic threshold checks.
-- **Resilience:** Built-in retry policies using Polly.
-- **Cross-Platform:** Runs on Windows and Linux (Ubuntu).
-- **Run Once Mode:** Trigger an immediate backup on demand via CLI flag.
-- **Local Only Mode:** Backup, verify integrity, and package archives locally without cloud storage upload.
+- **Multi-Engine Support:** Native orchestration for Microsoft SQL Server and PostgreSQL.
+- **Backup Integrity:** Verifies SQL Server payloads using `RESTORE VERIFYONLY` prior to upload.
+- **Cloud Delivery:** Direct-to-cloud transfers to Cloudflare R2 / AWS S3 with automatic bucket size threshold retention policies.
+- **Docker First:** Architected for seamless deployment via Docker Compose with easy configuration mounting.
+- **Resilient Operations:** Built-in network retry policies using Polly.
+- **Run Once Mode:** Trigger an immediate on-demand backup cycle via CLI flag.
+- **Local Only Mode:** Backup, compress, and retain archives locally without cloud transit.
 
-## Documentation
+## Quick Start (Docker)
 
-- **Configuration:** Settings via `appsettings.json` or environment variables.
-- **Setup:** Database user configuration and service registration.
+The easiest and most robust way to run BakToBucket is using the official Docker image alongside your existing database containers using `docker-compose`. 
 
-## Quick Start
+Instead of dealing with dozens of environment variables, mount your `appsettings.json` file directly into the container.
 
-### Installation
-
-Download the latest release from the [Releases page](../../releases) and extract it to your server.
+**⚠️ CRITICAL PRE-REQUISITE:** You *must* create the empty `appsettings.json` file on your host machine **before** running docker compose. If the file does not exist on disk, Docker will incorrectly create it as a directory and crash with a `500 Internal Server Error`.
 
 ```bash
-# Linux example
-cd /opt/BakToBucket
-sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.15.0/BakToBucket_v0.15.0_linux-x64.tar.gz
-sudo tar -xzf BakToBucket_v0.15.0_linux-x64.tar.gz
-sudo chmod +x BakToBucket
-```
-
-### Database Setup
-
-The service requires a dedicated user with backup permissions:
-
-1. Locate the provided script: `Scripts/CreateBackupUser.sql`.
-2. Execute it on your SQL Server instance to create the `BakToBucketUser`.
-3. Ensure the user is mapped to each database being backed up and has `dbcreator` and `diskadmin` server roles.
-4. Use this user's credentials in your connection string.
-
----
-
-## Run Once Mode
-
-Use the `--run-once` flag to trigger an immediate backup without waiting for the scheduled time. Useful for testing your configuration or performing on-demand backups.
-
-```bash
-./BakToBucket --run-once
-```
-
-The service will execute the full backup cycle — backup, compress, upload to R2 (or retain locally if `LocalOnly` is set) — and then exit.
-
----
-
-## Deployment
-
-### Docker (Recommended)
-
-The easiest and most robust way to run BakToBucket is using the official Docker image alongside your databases using `docker-compose`. 
-
-Instead of dealing with dozens of environment variables, the recommended approach is to mount your `appsettings.json` file directly into the container.
-
-**⚠️ CRITICAL STEP:** You *must* create the empty `appsettings.json` file on your host machine **before** running docker compose. If the file does not exist, Docker will assume it's a directory and crash with a `500 Internal Server Error`.
-
-```bash
-# 1. Create the local archives directory
+# 1. Create the local archives directory on your host
 mkdir -p /srv/databases/baktobucket/archives
 
 # 2. Create the empty configuration file on your host
 touch /srv/databases/baktobucket/appsettings.json
 ```
 
-Now, edit your `appsettings.json` with your configuration (see the Configuration section). To allow BakToBucket to securely connect to your other local Docker databases without complex network configurations, use the `host.docker.internal` trick in your `docker-compose.yml`:
+Now, edit your `appsettings.json` with your configuration (see the Configuration section below). To allow BakToBucket to securely connect to your other local Docker databases without complex network configurations, use the `host-gateway` bridge in your `docker-compose.yml`:
 
 ```yaml
 services:
@@ -88,16 +44,14 @@ services:
     image: ghcr.io/lucianocbarilari/baktobucket:latest
     container_name: baktobucket
     restart: always
-    # Allows the container to reach the host's exposed database ports
+    # Allows the container to reach the host's exposed database ports (e.g., 1433, 5432)
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      # Ensures you can see console logs in Portainer / Docker
-      - DOTNET_ENVIRONMENT=Development
       # Set your timezone so scheduled backups run at the correct local time
       - TZ=America/Argentina/Buenos_Aires
     volumes:
-      # If using SQL Server, mount its backup folder
+      # If using SQL Server, mount the physical folder where SQL Server saves its .bak files
       - /srv/databases/sqlserver/backup:/app/sql_backups
       # Where your final compressed ZIPs will be saved
       - /srv/databases/baktobucket/archives:/app/Archives
@@ -105,10 +59,17 @@ services:
       - /srv/databases/baktobucket/appsettings.json:/app/appsettings.json
 ```
 
-Run it with:
+Deploy the stack:
 ```bash
 docker compose up -d
 ```
+
+## Native Installation (Windows / Linux)
+
+If you prefer to run BakToBucket directly on the host operating system as a background daemon:
+
+1. Download the latest release from the [Releases page](../../releases) and extract it to your server.
+2. Edit `appsettings.json` with your credentials.
 
 ### Windows Service
 
@@ -138,16 +99,12 @@ User=root
 WantedBy=multi-user.target
 ```
 
-Then enable and start it:
-
+Enable and start the service:
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable BakToBucket
 sudo systemctl start BakToBucket
-sudo systemctl status BakToBucket
 ```
-
----
 
 ## Configuration
 
@@ -157,14 +114,13 @@ The service is configured via `appsettings.json` or environment variables (using
 | :--- | :--- |
 | **LogOptions** | Logging configuration (folder, filename, minimum level). |
 | **StorageOptions** | Cloudflare R2 / S3 storage credentials and bucket details. |
-| ConnectionStrings | Database connection strings for SqlServer and PostgreSql. |
-| AppOptions | Core application settings (BackupHostName, LocalOnly, ZipOutputPath, Schedule, and engine-specific configs). |
-| RetentionOptions | Maximum allowed total size for the bucket in GB. |
+| **ConnectionStrings** | Database connection strings for `sqlserver` and `postgresql`. |
+| **AppOptions** | Core application settings (`BackupHostName`, `LocalOnly`, `ZipOutputPath`, `Schedule`). |
+| **Engines** | Engine-specific configs (`Enabled`, `EngineBackupPath`, `LocalBackupPath`, `IncludedDatabases`). |
+| **RetentionOptions** | Maximum allowed total size for the bucket in GB. |
 
 
 ### Example `appsettings.json`
-
-#### Standard Configuration
 
 ```json
 {
@@ -180,12 +136,12 @@ The service is configured via `appsettings.json` or environment variables (using
     "BucketName": "backups"
   },
   "ConnectionStrings": {
-    "sqlserver": "Server=localhost;Database=master;...",
-    "postgresql": "Host=localhost;Database=master;..."
+    "sqlserver": "Server=localhost;Database=master;User Id=sa;Password=your_password;TrustServerCertificate=True",
+    "postgresql": "Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=your_password"
   },
   "AppOptions": {
-    "BackupHostName": "MyServer",
-    "ZipOutputPath": "Archives",
+    "BackupHostName": "Production-DB",
+    "ZipOutputPath": "/app/Archives",
     "LocalOnly": false,
     "BackupIntervalHours": 24,
     "Schedule": {
@@ -196,14 +152,14 @@ The service is configured via `appsettings.json` or environment variables (using
       "sqlserver": {
         "Enabled": true,
         "EngineBackupPath": "/var/opt/mssql/backup",
-        "LocalBackupPath": "/srv/sqlserver/backup",
-        "IncludedDatabases": ["Db1", "Db2"]
+        "LocalBackupPath": "/app/sql_backups",
+        "IncludedDatabases": ["ERP_Prod", "HR_Data"]
       },
       "postgresql": {
-        "Enabled": false,
-        "EngineBackupPath": "/var/lib/postgresql/backup",
-        "LocalBackupPath": "/srv/postgresql/backup",
-        "IncludedDatabases": []
+        "Enabled": true,
+        "EngineBackupPath": "/app/pg_backups",
+        "LocalBackupPath": "/app/pg_backups",
+        "IncludedDatabases": ["WebApp_DB"]
       }
     }
   },
@@ -213,36 +169,12 @@ The service is configured via `appsettings.json` or environment variables (using
 }
 ```
 
-#### SQL Server in Docker Desktop (Windows)
+### SQL Server Dedicated User Setup
 
-When running SQL Server on Docker Desktop for Windows, using a direct bind mount (e.g., `C:\Backups:/var/opt/mssql/backup`) will cause the `BACKUP DATABASE` command to fail with **OS Error 31 (DiskChangeFileSize)** due to VirtioFS/NTFS limitations.
-
-To resolve this, use a **Docker Named Volume** and configure BakToBucket to read from the WSL2 UNC network path:
-
-**1. `docker-compose.yml`:**
-```yaml
-services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    volumes:
-      - sql_backups:/var/opt/mssql/backup
-
-volumes:
-  sql_backups:
-```
-
-**2. `appsettings.json`:**
-```json
-  "AppOptions": {
-    "SqlServer": {
-      "Enabled": true,
-      "EngineBackupPath": "/var/opt/mssql/backup",
-      "LocalBackupPath": "\\\\wsl.localhost\\docker-desktop\\mnt\\docker-desktop-disk\\data\\docker\\volumes\\sqlserver_sql_backups\\_data"
-    },
-    "ZipOutputPath": "C:\\Backups"
-  }
-```
-*(Note: Docker Compose usually prefixes the volume name with your project directory name, e.g., `sqlserver_sql_backups`).*
+If you are not using `sa`, the service requires a dedicated user with backup permissions.
+1. Locate the provided script: `Scripts/CreateBackupUser.sql`.
+2. Execute it on your SQL Server instance to create the `BakToBucketUser`.
+3. Ensure the user is mapped to each database being backed up and has `dbcreator` and `diskadmin` server roles.
 
 ## License
 
