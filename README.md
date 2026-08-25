@@ -66,7 +66,21 @@ The service will execute the full backup cycle — backup, compress, upload to R
 
 ### Docker (Recommended)
 
-The easiest way to run BakToBucket is using the official Docker image alongside your databases using `docker-compose`. Configuration can be fully managed via a `.env` file.
+The easiest and most robust way to run BakToBucket is using the official Docker image alongside your databases using `docker-compose`. 
+
+Instead of dealing with dozens of environment variables, the recommended approach is to mount your `appsettings.json` file directly into the container.
+
+**⚠️ CRITICAL STEP:** You *must* create the empty `appsettings.json` file on your host machine **before** running docker compose. If the file does not exist, Docker will assume it's a directory and crash with a `500 Internal Server Error`.
+
+```bash
+# 1. Create the local archives directory
+mkdir -p /srv/databases/baktobucket/archives
+
+# 2. Create the empty configuration file on your host
+touch /srv/databases/baktobucket/appsettings.json
+```
+
+Now, edit your `appsettings.json` with your configuration (see the Configuration section). To allow BakToBucket to securely connect to your other local Docker databases without complex network configurations, use the `host.docker.internal` trick in your `docker-compose.yml`:
 
 ```yaml
 services:
@@ -74,12 +88,23 @@ services:
     image: ghcr.io/lucianocbarilari/baktobucket:latest
     container_name: baktobucket
     restart: always
-    env_file:
-      - .env
+    # Allows the container to reach the host's exposed database ports
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Ensures you can see console logs in Portainer / Docker
+      - DOTNET_ENVIRONMENT=Development
+      # Set your timezone so scheduled backups run at the correct local time
+      - TZ=America/Argentina/Buenos_Aires
     volumes:
-      - /path/to/sql_backups:/app/sql_backups
-      - /path/to/archives:/app/Archives
+      # If using SQL Server, mount its backup folder
+      - /srv/databases/sqlserver/backup:/app/sql_backups
+      # Where your final compressed ZIPs will be saved
+      - /srv/databases/baktobucket/archives:/app/Archives
+      # Mount your configuration file
+      - /srv/databases/baktobucket/appsettings.json:/app/appsettings.json
 ```
+
 Run it with:
 ```bash
 docker compose up -d
