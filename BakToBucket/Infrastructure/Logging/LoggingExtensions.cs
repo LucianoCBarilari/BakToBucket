@@ -22,6 +22,7 @@ public static class LoggingExtensions
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("System", LogEventLevel.Warning)
             .Enrich.FromLogContext()
+            .WriteTo.Console(outputTemplate: OutputTemplate)
             .WriteTo.File(
                 path: logConfig.GetFilePath(),
                 outputTemplate: OutputTemplate,
@@ -29,11 +30,6 @@ public static class LoggingExtensions
                 retainedFileCountLimit: 1,
                 shared: true,
                 flushToDiskInterval: TimeSpan.FromSeconds(1));
-
-        if (builder.Environment.IsDevelopment())
-        {
-            loggerConfiguration.WriteTo.Console(outputTemplate: OutputTemplate);
-        }
 
         Log.Logger = loggerConfiguration.CreateLogger();
 
