@@ -1,8 +1,6 @@
 services:
   baktobucket:
-    build: 
-      context: ./BakToBucket
-      dockerfile: Dockerfile
+    image: ghcr.io/lucianocbarilari/baktobucket:latest
     container_name: baktobucket
     restart: always
     env_file:
