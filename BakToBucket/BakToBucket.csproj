@@ -7,7 +7,7 @@
     <Version>0.14.0</Version>
     <Authors>Luciano Castillo</Authors>
     <Company>Luciano Castillo</Company>
-    <Description>Automated SQL Server backup service with Cloudflare R2 integration.</Description>
+    <Description>Automated, multi-engine (SQL Server and PostgreSQL) database backup service with direct Cloudflare R2 / S3 integration.</Description>
     <PackageProjectUrl>https://github.com/lucianocastillo/BakToBucket</PackageProjectUrl>
   </PropertyGroup>
 
@@ -18,6 +18,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.9" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="Polly" Version="8.7.0" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />

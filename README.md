@@ -155,7 +155,6 @@ The service is configured via `appsettings.json` or environment variables (using
       },
       "postgresql": {
         "Enabled": false,
-        "DockerContainerName": "postgres-local",
         "EngineBackupPath": "/var/lib/postgresql/backup",
         "LocalBackupPath": "/srv/postgresql/backup",
         "IncludedDatabases": []
