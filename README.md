@@ -34,8 +34,8 @@ Download the latest release from the [Releases page](../../releases) and extract
 ```bash
 # Linux example
 cd /opt/BakToBucket
-sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.14.0/BakToBucket_v0.14.0_linux-x64.tar.gz
-sudo tar -xzf BakToBucket_v0.14.0_linux-x64.tar.gz
+sudo wget https://github.com/<your-org>/BakToBucket/releases/download/v0.15.0/BakToBucket_v0.15.0_linux-x64.tar.gz
+sudo tar -xzf BakToBucket_v0.15.0_linux-x64.tar.gz
 sudo chmod +x BakToBucket
 ```
 
@@ -64,7 +64,28 @@ The service will execute the full backup cycle — backup, compress, upload to R
 
 ## Deployment
 
-### Windows
+### Docker (Recommended)
+
+The easiest way to run BakToBucket is using the official Docker image alongside your databases using `docker-compose`. Configuration can be fully managed via a `.env` file.
+
+```yaml
+services:
+  baktobucket:
+    image: ghcr.io/lucianocbarilari/baktobucket:latest
+    container_name: baktobucket
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - /path/to/sql_backups:/app/sql_backups
+      - /path/to/archives:/app/Archives
+```
+Run it with:
+```bash
+docker compose up -d
+```
+
+### Windows Service
 
 ```powershell
 New-Service -Name "BakToBucket" -BinaryPathName "C:\Path\To\BakToBucket.exe" -DisplayName "BakToBucket Service" -StartupType Automatic
