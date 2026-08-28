@@ -1,0 +1,12 @@
+services:
+  baktobucket:
+    image: ghcr.io/lucianocbarilari/baktobucket:latest
+    container_name: baktobucket
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      # Mount the folder where SQL Server saves .bak files (if SQL Server is used)
+      - /path/to/host/sql_backups:/app/sql_backups
+      # Mount the folder to store the final generated ZIP files
+      - /path/to/host/archives:/app/Archives

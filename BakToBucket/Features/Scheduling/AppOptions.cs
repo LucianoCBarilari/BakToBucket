@@ -18,5 +18,4 @@ public class EngineOptions
     public string EngineBackupPath { get; set; } = string.Empty;
     public string? LocalBackupPath { get; set; }
     public List<string> IncludedDatabases { get; set; } = [];
-    public string? DockerContainerName { get; set; }
 }
